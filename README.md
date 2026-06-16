@@ -17,9 +17,7 @@ Every participant completes **two structurally identical NAD target-detection ta
 | `audio_nonverbal/` | 32 musical-tone files (`.wav`): flute A/B, flute fillers, violin two-tone X sequences. |
 | `README.md` | This file. |
 
-**Audio spec (both sets, identical):** mono, 44.1 kHz, 16-bit WAV, peak-normalised to −1 dBFS — identical processing so low-level acoustic differences cannot confound the verbal/non-verbal comparison.
-
-> **Verbal audio is provisional.** The final text-to-speech voice is not yet chosen; the verbal tokens are to be **synthesised directly at 44.1 kHz** to the spec above once decided.
+**Audio spec (both sets, identical):** mono, 44.1 kHz, 16-bit WAV, peak-normalised to −1 dBFS, identical processing so low-level acoustic differences cannot confound the verbal/non-verbal comparison.
 
 ---
 
@@ -39,15 +37,7 @@ The experiment is a single self-contained `index.html` plus the two audio folder
 3. Commit. In the Pavlovia dashboard, set the experiment status to **Piloting** (or **Running**). Toggling **Inactive → Piloting** forces Pavlovia to regenerate its config if needed.
 4. Run via `https://run.pavlovia.org/<user>/<project>/`. The Prolific ID is read from the URL: `...?PROLIFIC_PID=xxxx`.
 
-> If audio fails to load, it is almost always a name/case mismatch: the folders must be exactly `audio_verbal` / `audio_nonverbal` and every file name must match what `index.html` requests. After replacing files, hard-refresh (Cmd/Ctrl+Shift+R) to clear the browser cache.
-
-### Locally (preview / testing)
-
-Serve the folder over a local web server so the browser can load the audio, e.g.:
-```
-python3 -m http.server
-```
-then open `http://localhost:8000/`. Opened this way (not on `run.pavlovia.org`), a **TEST MODE** banner appears, Pavlovia is skipped, and the collected responses are shown on screen at the end (not saved). With no Prolific ID present, task order falls back to random (see below).
+> If audio fails to load, it is almost always a name/case mismatch: the folders must be exactly `audio_verbal` / `audio_nonverbal` and every file name must match what `index.html` requests.
 
 ---
 
