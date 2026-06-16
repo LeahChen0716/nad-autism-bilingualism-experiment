@@ -2,11 +2,9 @@
 
 Online experiment on **non-adjacent dependency (NAD) learning in autistic adults** (verbal vs. non-verbal), UCL MA dissertation.
 
-Every participant completes **two structurally identical NAD target-detection tasks** — one with **spoken pseudowords**, one with **musical instrument sounds** — in a counterbalanced order, plus background and post-task questionnaires. Built in [jsPsych](https://www.jspsych.org/) 7.3.4, hosted on [Pavlovia](https://pavlovia.org/), recruited via Prolific.
+Every participant completes **two structurally identical NAD target-detection tasks**: one with **spoken pseudowords**, one with **musical instrument sounds** in a counterbalanced order, plus background and post-task questionnaires. Built in [jsPsych](https://www.jspsych.org/) 7.3.4, hosted on [Pavlovia](https://pavlovia.org/), recruited via Prolific.
 
 - **Live study:** `https://run.pavlovia.org/LeahChen/nad-experiment/`
-
-> This GitHub repository is the **open, readable copy**. The live study runs from a **separate Pavlovia GitLab repository**: the two are **not synced automatically**, so keep them in step by hand. Several parameters are still provisional (see [Open decisions](#open-decisions)).
 
 ---
 
