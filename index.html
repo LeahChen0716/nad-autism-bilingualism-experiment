@@ -403,7 +403,7 @@ var jsPsychPavlovia = (function (jsPsych)
             <div class="nad-key" id="nad-key-target"><div class="kcap">${String(trial.target_key).toUpperCase()}</div><div class="klab">TARGET sound</div></div>
             <div class="nad-key" id="nad-key-other"><div class="kcap">${String(trial.nontarget_key).toUpperCase()}</div><div class="klab">any other</div></div>
           </div>
-          <div class="nad-hint">Listen to the last sound, then press ${String(trial.target_key).toUpperCase()} or ${String(trial.nontarget_key).toUpperCase()} as quickly as you can.</div>
+          <div class="nad-hint">When a clip ends with the target, press ${String(trial.target_key).toUpperCase()}; otherwise press ${String(trial.nontarget_key).toUpperCase()}.</div>
         </div>`;
       const orb = display_element.querySelector('#nad-orb');
       const ctx = jsPsych.pluginAPI.audioContext();
@@ -508,10 +508,10 @@ function buildNadTask(jsPsych, opts){
 
   // ---------- CONFIG (Dumont et al. 2025 defaults — confirm before main run) ----------
   const CFG={
-    nTraining:4,   // was 6 (Dumont default); reduced to shorten session — confirm with supervisor
+    nTraining:6,   // Dumont et al. (2025)
     perBlock:{target:12, nonTarget:12, filler:6},   // 30 trials/block
     interElementMs:1000,
-    responseWindowMs:1000,   // was 750 (Dumont child default); widened for adult online sample — see note
+    responseWindowMs:750,    // Dumont et al. (2025)
     practiceTrials:8,
     targetKey:'f', nonTargetKey:'j',
     itiMs:400,
@@ -562,9 +562,9 @@ function buildNadTask(jsPsych, opts){
   function blockIntro(n){
     return { type:jsPsychHtmlButtonResponse, stimulus:`<div class="task-card">
       <div class="welcome-title">Block ${n}</div>
-      <p>Quick reminder: listen to the <b>last</b> sound of each clip. Press
-         <b>${CFG.targetKey.toUpperCase()}</b> when a clip ends with the <b style="color:#2f7d3a;">TARGET</b> sound below, and
-         <b>${CFG.nonTargetKey.toUpperCase()}</b> for anything else. Have a listen, then begin.</p>
+      <p>Quick reminder of the target ${opts.oneNoun}. Press
+         <b>${CFG.targetKey.toUpperCase()}</b> when a clip ends with the <b style="color:#2f7d3a;">TARGET</b> below, and
+         <b>${CFG.nonTargetKey.toUpperCase()}</b> when it ends with anything else. Have a listen, then begin.</p>
       <div class="demo-row"><span class="demo-tag" style="color:#2f7d3a;">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
     </div>`, choices:['Start block'] };
   }
@@ -575,29 +575,32 @@ function buildNadTask(jsPsych, opts){
   // instructions + target demo  (second task gets a short "same game, new sounds" recap)
   if (opts.isSecond){
     tl.push(btn(`<div class="task-card">
-      <div class="welcome-title">Second listening game</div>
-      <p>This game works <b>exactly the same way</b> as the last one: listen to the <b>last</b> sound of each clip, then press
-         <b>${CFG.targetKey.toUpperCase()}</b> if it is the <b style="color:#2f7d3a;">TARGET</b> sound and
-         <b>${CFG.nonTargetKey.toUpperCase()}</b> for any other sound.</p>
-      <p>The only difference is that it uses <b>${opts.soundNoun}</b> instead, so there is a <b>new target sound</b> to learn. You'll hear it on the next screen and can practise first.</p>
+      <div class="welcome-title">Second game — same idea, new ${opts.oneNoun}s</div>
+      <p>This game works <b>just like the last one</b>. You'll hear short clips, and you only need to listen to the <b>very last ${opts.oneNoun}</b> of each clip:</p>
+      <ul class="rules">
+        <li><b class="k">${CFG.targetKey.toUpperCase()}</b> the last ${opts.oneNoun} is the <b style="color:#2f7d3a;">TARGET</b></li>
+        <li><b class="k">${CFG.nonTargetKey.toUpperCase()}</b> the last ${opts.oneNoun} is <b>anything else</b></li>
+      </ul>
+      <p>This time the clips are made of <b>${opts.manyNoun}</b>, so there is a <b>new target</b> to learn. You'll hear it on the next screen and can practise first.</p>
     </div>`, 'Next'));
   } else {
     tl.push(btn(`<div class="task-card">
-      <div class="welcome-title">Listening game</div>
-      <p>You will hear short clips. Each clip is <b>three ${opts.soundNoun}</b> played one after another. After the last sound, you decide what it was:</p>
+      <div class="welcome-title">A listening game</div>
+      <p>In this game you'll hear lots of short clips. Each clip is <b>three ${opts.manyNoun}</b> in a row, played quickly one after another.</p>
+      <p>One particular ${opts.oneNoun} is the <b style="color:#2f7d3a;">TARGET</b>. On each clip, you decide whether it <b>ends</b> with the target:</p>
       <ul class="rules">
-        <li><b class="k">${CFG.targetKey.toUpperCase()}</b> the clip ends with the <b style="color:#2f7d3a;">TARGET</b> sound</li>
-        <li><b class="k">${CFG.nonTargetKey.toUpperCase()}</b> the clip ends with <b>any other</b> sound</li>
+        <li><b class="k">${CFG.targetKey.toUpperCase()}</b> press ${CFG.targetKey.toUpperCase()} if the clip's <b>last</b> ${opts.oneNoun} is the <b style="color:#2f7d3a;">TARGET</b></li>
+        <li><b class="k">${CFG.nonTargetKey.toUpperCase()}</b> press ${CFG.nonTargetKey.toUpperCase()} if it ends with <b>any other</b> ${opts.oneNoun}</li>
       </ul>
-      <p>You will hear the target sound on the next screen, and you can practise before the real game starts. Keep one finger on <b>${CFG.targetKey.toUpperCase()}</b> and one on <b>${CFG.nonTargetKey.toUpperCase()}</b>, and respond <b>as quickly and accurately as you can</b>.</p>
+      <p>You'll hear the target ${opts.oneNoun} on the next screen, and you can practise before the real game starts. Rest one finger on <b>${CFG.targetKey.toUpperCase()}</b> and one on <b>${CFG.nonTargetKey.toUpperCase()}</b>, listen to each clip, and answer <b>as quickly and accurately as you can</b>.</p>
     </div>`, 'Next'));
   }
 
   tl.push(btn(`<div class="task-card">
-    <div class="welcome-title">This is the target sound</div>
-    <p>Listen to it a few times so you can recognise it. Press <b>${CFG.targetKey.toUpperCase()}</b> whenever a clip ends with this sound.</p>
+    <div class="welcome-title">This is the target ${opts.oneNoun}</div>
+    <p>Have a listen a few times so you can recognise it. From now on, press <b>${CFG.targetKey.toUpperCase()}</b> whenever a clip <b>ends with this ${opts.oneNoun}</b>.</p>
     <div class="demo-row"><span class="demo-tag" style="color:#2f7d3a;">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
-    <p style="margin-top:18px;">Here is an example of a different (non-target) sound — for these you would press <b>${CFG.nonTargetKey.toUpperCase()}</b>:</p>
+    <p style="margin-top:18px;">Here is a <b>different</b> ${opts.oneNoun}. When a clip ends with anything that is <b>not</b> the target, press <b>${CFG.nonTargetKey.toUpperCase()}</b>:</p>
     <div class="demo-row"><span class="demo-tag">other (${CFG.nonTargetKey.toUpperCase()}):</span><audio controls preload="auto" src="${otherFile}"></audio></div>
   </div>`, "I've learned the target — let's practise"));
 
@@ -614,7 +617,7 @@ function buildNadTask(jsPsych, opts){
   tl.push({ timeline: jsPsych.randomization.shuffle(practiceSet) });
 
   tl.push(btn(`<div class="task-card"><div class="welcome-title">Ready</div>
-    <p>Great — the real game starts now. There is <b>no</b> feedback from here on; just respond to the last sound as fast and accurately as you can.</p>
+    <p>Great — the real game starts now. There is <b>no</b> feedback from here on. Listen to each clip and press <b>${CFG.targetKey.toUpperCase()}</b> if it ends with the target, <b>${CFG.nonTargetKey.toUpperCase()}</b> if not — as quickly and accurately as you can.</p>
     <p>It runs in several short blocks with breaks in between.</p></div>`, 'Begin'));
 
   // 6 training blocks (+ breaks), 1 disruption, 1 recovery — block intros are generic (no hint of disruption)
@@ -646,12 +649,12 @@ function buildNadTask(jsPsych, opts){
 /* ---- Verbal task: spoken pseudoword audio (mp3 in audio_verbal/) ---- */
 function buildVerbalTask(jsPsych, isSecond){
   const DIR='audio_verbal/';
-  const A=[{id:'A1',file:'A1_vup.mp3'},{id:'A2',file:'A2_gik.mp3'}];
-  const B=[{id:'B1',file:'B1_wod.mp3'},{id:'B2',file:'B2_mip.mp3'}];
-  const F=[{id:'F1',file:'Filler1_kud.mp3'},{id:'F2',file:'Filler2_rul.mp3'},{id:'F3',file:'Filler3_hib.mp3'},{id:'F4',file:'Filler4_wub.mp3'}];
+  const A=[{id:'A1',file:'A1_vup.wav'},{id:'A2',file:'A2_gik.wav'}];
+  const B=[{id:'B1',file:'B1_wod.wav'},{id:'B2',file:'B2_mip.wav'}];
+  const F=[{id:'F1',file:'Filler1_kud.wav'},{id:'F2',file:'Filler2_rul.wav'},{id:'F3',file:'Filler3_hib.wav'},{id:'F4',file:'Filler4_wub.wav'}];
   const Xn=['X01_nupen','X02_lobat','X03_tasom','X04_basut','X05_sapet','X06_rilom','X07_solug','X08_rinag','X09_tilop','X10_rodup','X11_lemip','X12_tabig','X13_tobir','X14_lebam','X15_nabem','X16_debog','X17_tanab','X18_redib','X19_lobun','X20_rinur','X21_dolet','X22_sabip','X23_solib','X24_sunic'];
-  const X=Xn.map((f,i)=>({id:'X'+String(i+1).padStart(2,'0'), file:f+'.mp3'}));
-  return buildNadTask(jsPsych, { task:'verbal', DIR, A, B, F, X, soundNoun:'made-up spoken sounds', isSecond:!!isSecond });
+  const X=Xn.map((f,i)=>({id:'X'+String(i+1).padStart(2,'0'), file:f+'.wav'}));
+  return buildNadTask(jsPsych, { task:'verbal', DIR, A, B, F, X, oneNoun:'word', manyNoun:'made-up words', isSecond:!!isSecond });
 }
 
 /* ---- Non-verbal task: musical tone audio (wav in audio_nonverbal/) ---- */
@@ -662,13 +665,13 @@ function buildNonverbalTask(jsPsych, isSecond){
   const F=[{id:'F1',file:'NV_Filler1_G5.wav'},{id:'F2',file:'NV_Filler2_A5.wav'},{id:'F3',file:'NV_Filler3_A6.wav'},{id:'F4',file:'NV_Filler4_B6.wav'}];
   const Xn=['NV_X01_C4-E4','NV_X02_D4-F4','NV_X03_E4-G4','NV_X04_F4-A4','NV_X05_G4-B4','NV_X06_A4-C5','NV_X07_B4-D4','NV_X08_C5-E4','NV_X09_C4-G4','NV_X10_D4-A4','NV_X11_E4-B4','NV_X12_F4-C5','NV_X13_G4-C4','NV_X14_A4-D4','NV_X15_B4-E4','NV_X16_C5-F4','NV_X17_C4-F4','NV_X18_D4-G4','NV_X19_E4-A4','NV_X20_F4-B4','NV_X21_G4-D4','NV_X22_A4-E4','NV_X23_B4-F4','NV_X24_C5-G4'];
   const X=Xn.map((f,i)=>({id:'X'+String(i+1).padStart(2,'0'), file:f+'.wav'}));
-  return buildNadTask(jsPsych, { task:'nonverbal', DIR, A, B, F, X, soundNoun:'short musical sounds', isSecond:!!isSecond });
+  return buildNadTask(jsPsych, { task:'nonverbal', DIR, A, B, F, X, oneNoun:'sound', manyNoun:'instrument sounds', isSecond:!!isSecond });
 }
 
 /* All audio files for both tasks — used for a single up-front preload so there is no
    loading screen right before each task (smoother, and no flash on cached loads). */
 function allNadAudioFiles(){
-  const v=['A1_vup','A2_gik','B1_wod','B2_mip','Filler1_kud','Filler2_rul','Filler3_hib','Filler4_wub','X01_nupen','X02_lobat','X03_tasom','X04_basut','X05_sapet','X06_rilom','X07_solug','X08_rinag','X09_tilop','X10_rodup','X11_lemip','X12_tabig','X13_tobir','X14_lebam','X15_nabem','X16_debog','X17_tanab','X18_redib','X19_lobun','X20_rinur','X21_dolet','X22_sabip','X23_solib','X24_sunic'].map(f=>'audio_verbal/'+f+'.mp3');
+  const v=['A1_vup','A2_gik','B1_wod','B2_mip','Filler1_kud','Filler2_rul','Filler3_hib','Filler4_wub','X01_nupen','X02_lobat','X03_tasom','X04_basut','X05_sapet','X06_rilom','X07_solug','X08_rinag','X09_tilop','X10_rodup','X11_lemip','X12_tabig','X13_tobir','X14_lebam','X15_nabem','X16_debog','X17_tanab','X18_redib','X19_lobun','X20_rinur','X21_dolet','X22_sabip','X23_solib','X24_sunic'].map(f=>'audio_verbal/'+f+'.wav');
   const nv=['NV_A1_C5','NV_A2_F5','NV_B1_C6','NV_B2_F6','NV_Filler1_G5','NV_Filler2_A5','NV_Filler3_A6','NV_Filler4_B6','NV_X01_C4-E4','NV_X02_D4-F4','NV_X03_E4-G4','NV_X04_F4-A4','NV_X05_G4-B4','NV_X06_A4-C5','NV_X07_B4-D4','NV_X08_C5-E4','NV_X09_C4-G4','NV_X10_D4-A4','NV_X11_E4-B4','NV_X12_F4-C5','NV_X13_G4-C4','NV_X14_A4-D4','NV_X15_B4-E4','NV_X16_C5-F4','NV_X17_C4-F4','NV_X18_D4-G4','NV_X19_E4-A4','NV_X20_F4-B4','NV_X21_G4-D4','NV_X22_A4-E4','NV_X23_B4-F4','NV_X24_C5-G4'].map(f=>'audio_nonverbal/'+f+'.wav');
   return v.concat(nv);
 }
@@ -699,7 +702,7 @@ window.addEventListener('load', function() {
 });
 
 function runExperiment() {
-  const jsPsych = initJsPsych({ default_iti: 200, on_finish: function(){ jsPsych.data.displayData(); } });
+  const jsPsych = initJsPsych({ on_finish: function(){ jsPsych.data.displayData(); } });
 
   // --- Capture Prolific ID from the URL (e.g. ?PROLIFIC_PID=xxxx). Defaults if absent. ---
   const urlParams = new URLSearchParams(window.location.search);
@@ -1075,8 +1078,20 @@ function runExperiment() {
 
 
   // ---- SECTION C: NAD task — both modalities, order counterbalanced per participant ----
-  const verbalFirst = jsPsych.randomization.sampleWithoutReplacement([true,false],1)[0];
-  jsPsych.data.addProperties({ task_order: verbalFirst ? 'verbal_first' : 'nonverbal_first' });
+  // Task order: assigned by Prolific-ID parity (deterministic, ~50/50, mirrors the even/odd-ID
+  // assignment used by Dumont et al., 2025). Prolific IDs are alphanumeric, so parity is taken
+  // from the sum of character codes. With no ID (local testing), fall back to random.
+  let verbalFirst, orderMethod;
+  if (prolificID && prolificID !== 'NO_PROLIFIC_ID') {
+    let s = 0;
+    for (let i = 0; i < prolificID.length; i++) s += prolificID.charCodeAt(i);
+    verbalFirst = (s % 2 === 0);          // even sum -> verbal first; odd -> non-verbal first
+    orderMethod = 'prolific_id_parity';
+  } else {
+    verbalFirst = jsPsych.randomization.sampleWithoutReplacement([true,false],1)[0];
+    orderMethod = 'random_no_id';
+  }
+  jsPsych.data.addProperties({ task_order: verbalFirst ? 'verbal_first' : 'nonverbal_first', task_order_method: orderMethod });
 
   const firstTask  = verbalFirst ? buildVerbalTask(jsPsych, false)  : buildNonverbalTask(jsPsych, false);
   const secondTask = verbalFirst ? buildNonverbalTask(jsPsych, true) : buildVerbalTask(jsPsych, true);
