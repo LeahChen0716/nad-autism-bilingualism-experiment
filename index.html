@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sound Pattern Learning Study</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/jspsych@7.3.4/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-keyboard-response@1.1.3/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-button-response@1.1.3/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-survey-html-form@1.0.0/dist/index.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-preload@1.1.2/dist/index.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspsych@7.3.4/css/jspsych.css">
+
+  <style>
+    body { background-color: #f4f4f6; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1a1a2e; }
+    .jspsych-content { max-width: 900px; line-height: 1.6; margin-left: auto; margin-right: auto; }
+    .welcome-title { font-size: 28px; font-weight: 600; color: #1f3a5f; margin-bottom: 8px; }
+    .subtle { color: #666; font-size: 15px; }
+    .jspsych-btn { background-color: #1f3a5f; color: white; border: none; border-radius: 8px; padding: 12px 28px; font-size: 16px; cursor: pointer; }
+    .jspsych-btn:hover { background-color: #2f5496; }
+    #error-box { display:none; max-width:700px; margin:40px auto; padding:20px; background:#fff0f0; border:2px solid #d33; border-radius:8px; color:#900; font-family:monospace; white-space:pre-wrap; }
+
+    /* ---- Information sheet & consent page ---- */
+    .doc-wrap { text-align: left; }
+    .doc-title { font-size: 25px; font-weight: 600; color: #1f3a5f; margin-bottom: 4px; }
+    .doc-subtitle { font-style: italic; color: #555; margin-bottom: 16px; font-size: 18px; }
+    .doc-meta { font-size: 16px; color: #444; margin-bottom: 6px; }
+    .doc-wrap h3 { font-size: 18px; color: #1f3a5f; margin: 18px 0 4px; }
+    .doc-wrap p { margin: 8px 0; font-size: 18px; }
+    .consent-intro { background:#eef3fa; border-left:4px solid #1f3a5f; padding:12px 16px; border-radius:6px; margin:16px 0; font-size:18px; }
+    .consent-list { list-style: none; padding-left: 0; margin: 0 0 8px; }
+    .consent-list li { position: relative; padding: 9px 0 9px 28px; border-bottom: 1px solid #e2e2e8; font-size: 17px; }
+    .consent-list li:before { content: "\2713"; position: absolute; left: 0; top: 9px; color: #2f7d3a; font-weight: 700; }
+    .decline-note { color:#666; font-size:16px; margin-top:14px; }
+    .scroll-box { max-height: 60vh; overflow-y: auto; border:1px solid #ddd; border-radius:8px; padding:18px 22px; background:#fff; margin-bottom:8px; }
+    .btn-decline { background-color:#fff !important; color:#1f3a5f !important; border:1.5px solid #b9c2d0 !important; }
+    .btn-decline:hover { background-color:#f0f2f6 !important; }
+
+    /* ---- Questionnaire forms ---- */
+    .q-wrap { text-align:left; max-width:100%; margin:0 auto; }
+    .q-wrap .q-block { margin: 18px 0 24px; padding-bottom: 16px; border-bottom: 1px solid #eee; }
+    .q-wrap label.q-label { display:block; font-weight:600; color:#1f3a5f; margin-bottom:12px; font-size:19px; line-height:1.5; }
+    .q-wrap .q-hint { font-weight:400; color:#666; font-size:16px; }
+    .q-wrap .opt { display:block; margin:9px 0; font-size:18px; font-weight:400; color:#222; cursor:pointer; line-height:1.45; }
+    .q-wrap .opt input { margin-right:10px; transform:scale(1.25); }
+    .q-wrap input[type=text], .q-wrap input[type=number] { padding:9px 11px; border:1px solid #bbb; border-radius:6px; font-size:17px; width:280px; max-width:100%; }
+    /* live red warning once the field has content but is invalid */
+    .q-wrap input:not(:placeholder-shown):invalid { border-color:#d33; background:#fff6f6; }
+    .q-wrap .err-hint { display:none; color:#c0271a; font-size:14px; margin-top:6px; }
+    .q-wrap input:not(:placeholder-shown):invalid ~ .err-hint { display:block; }
+    /* conditionally-shown free-text boxes: hidden until the relevant option is chosen */
+    .q-wrap .other-text, .q-wrap .cond-detail { display:none; }
+    .q-wrap .opt:has(input:checked) + .other-text,
+    .q-wrap .opt:has(input:checked) + .cond-detail { display:block; }
+    /* awareness: reveal the free-text only when "yes" is chosen, regardless of option order */
+    .q-wrap .notice-block:has(input[value="yes"]:checked) .cond-detail { display:block; }
+    .q-wrap .other-text { margin:6px 0 0 38px; }
+    .q-wrap .cond-detail { margin-top:10px; }
+    .q-wrap .other-text input { width:320px; font-size:16px; }
+    .q-wrap .jspsych-survey-html-form { text-align:left; }
+    /* 5-point scale (horizontal) */
+    .scale5 { display:flex; gap:8px; margin-top:14px; }
+    .scale5 .pt { flex:1; text-align:center; cursor:pointer; padding:10px 6px; border:1px solid #dde2ea; border-radius:10px; background:#fafbfd; transition:background .12s,border-color .12s; }
+    .scale5 .pt:hover { background:#eef3fa; }
+    .scale5 .pt input { transform:scale(1.4); margin-bottom:8px; }
+    .scale5 .pt .num { display:block; font-size:20px; font-weight:700; color:#1f3a5f; margin-bottom:6px; }
+    .scale5 .pt .cap { display:block; font-size:14px; color:#333; line-height:1.35; }
+    .scale5 .pt:has(input:checked) { background:#e4eefb; border-color:#1f3a5f; }
+    /* AQ Likert grid */
+    .likert-table { width:100%; border-collapse:collapse; margin-top:10px; font-size:16px; }
+    .likert-table th { font-weight:600; color:#1f3a5f; padding:7px 4px; text-align:center; vertical-align:bottom; font-size:14px; }
+    .likert-table td { padding:11px 4px; border-bottom:1px solid #eee; vertical-align:middle; }
+    .likert-table td.stmt { text-align:left; width:46%; line-height:1.45; }
+    .likert-table td.opt-cell { text-align:center; }
+    .likert-table td.opt-cell input { transform:scale(1.25); }
+    .likert-table tr:hover { background:#f6f8fc; }
+
+    /* ---- NAD task (verbal & non-verbal) ---- */
+    .nad-stage { display:flex; flex-direction:column; align-items:center; gap:36px; padding:34px 0 20px; min-height:340px; justify-content:center; }
+    .nad-orb { width:128px; height:128px; border-radius:50%; background:radial-gradient(circle at 50% 38%, #dce7f7, #b6cae9); display:flex; align-items:center; justify-content:center; }
+    .nad-orb-core { width:56px; height:56px; border-radius:50%; background:#1f3a5f; opacity:.85; }
+    .nad-orb.pulse { animation: nadpulse .45s ease-out; }
+    @keyframes nadpulse { 0%{ transform:scale(1); box-shadow:0 0 0 0 rgba(31,58,95,.35);} 50%{ transform:scale(1.14);} 100%{ transform:scale(1); box-shadow:0 0 0 28px rgba(31,58,95,0);} }
+    .nad-keys { display:flex; gap:48px; }
+    .nad-key { min-width:160px; padding:16px 20px; border:2px solid #cdd6e4; border-radius:14px; text-align:center; background:#fff; transition:background .1s, border-color .1s; }
+    .nad-key .kcap { font-size:30px; font-weight:700; color:#1f3a5f; }
+    .nad-key .klab { font-size:15px; color:#555; margin-top:4px; }
+    #nad-key-target { border-color:#9fc6a6; }
+    .nad-key.chosen { background:#eef3fa; border-color:#1f3a5f; }
+    .nad-hint { color:#888; font-size:15px; }
+    .nad-fb { font-size:52px; font-weight:800; line-height:1; }
+    .nad-fb.good { color:#2f7d3a; } .nad-fb.bad { color:#c0271a; } .nad-fb.slow { color:#b06a00; font-size:26px; font-weight:600; }
+    .task-card { max-width:100%; margin:0 auto; text-align:left; }
+    .task-card p { font-size:18px; line-height:1.65; margin:16px 0; }
+    .task-card .welcome-title { font-size:28px; }
+    .task-card ul.rules { list-style:none; padding:0; margin:18px 0; }
+    .task-card ul.rules li { font-size:18px; line-height:1.5; padding:12px 16px; margin:8px 0; border-radius:10px; background:#eef3fa; }
+    .task-card ul.rules li b.k { display:inline-block; min-width:34px; text-align:center; padding:2px 8px; border-radius:6px; background:#1f3a5f; color:#fff; margin-right:8px; }
+    .task-card .demo-row { display:flex; align-items:center; gap:14px; margin:12px 0; }
+    .task-card .demo-tag { min-width:90px; font-weight:600; font-size:18px; }
+    .task-card audio { height:38px; }
+    .nad-hint { color:#888; font-size:17px; }
+  </style>
+</head>
+<body>
+  <div id="error-box"></div>
+</body>
+
+<!-- ============================================================ -->
+<!-- Pavlovia plugin (version 2022.1.1) embedded directly here    -->
+<!-- so there is no separate file to load.                        -->
+<!-- ============================================================ -->
+<script type="text/javascript">
+var jsPsychPavlovia = (function (jsPsych)
+{
+	"use strict";
+	class PavloviaPlugin
+	{
+		constructor(jsPsych) { this._jsPsych = jsPsych; }
+		async trial(display_element, trial)
+		{
+			switch (trial.command.toLowerCase())
+			{
+				case "init": await this._init(trial); break;
+				case "finish":
+					const data = this._jsPsych.data.get().csv();
+					await this._finish(trial, data);
+					break;
+				default: trial.errorCallback("unknown command: " + trial.command);
+			}
+			this._jsPsych.finishTrial();
+		}
+		static defaultErrorCallback(error)
+		{
+			console.error("[pavlovia " + PavloviaPlugin.version + "]", error);
+			let htmlCode = '<h3>[jspsych-pavlovia plugin ' + PavloviaPlugin.version + '] Error</h3><ul>';
+			while (true) {
+				if (typeof error === 'object' && 'context' in error) {
+					htmlCode += '<li>' + error.context + '</li>';
+					error = error.error;
+				} else {
+					htmlCode += '<li><b>' + error  + '</b></li>';
+					break;
+				}
+			}
+			htmlCode += '</ul>';
+			document.querySelector('body').innerHTML = htmlCode;
+		}
+		static defaultDataFilter(data) { return data; }
+		async _init(trial, configURL = 'config.json')
+		{
+			try
+			{
+				let response = await this._configure(configURL);
+				PavloviaPlugin._config = response.config;
+				this._log('init | _configure.response=', response);
+				response = await this._openSession();
+				this._log('init | _openSession.response=', response);
+				const _beforeunloadCallback = (event) =>
+				{
+					event.preventDefault();
+					event.returnValue = '';
+				};
+				window.addEventListener('beforeunload', _beforeunloadCallback);
+				window.addEventListener('unload', (event) =>
+				{
+					if (PavloviaPlugin._config.session.status === 'OPEN')
+					{
+						if (PavloviaPlugin._config.experiment.saveIncompleteResults)
+						{
+							const data = this._jsPsych.data.get().csv();
+							this._save(trial, data, true);
+						}
+						this._closeSession(false, true);
+					}
+				});
+			}
+			catch (error) { trial.errorCallback(error); }
+		}
+		async _finish(trial, data)
+		{
+			try
+			{
+				window.removeEventListener('beforeunload', PavloviaPlugin._beforeunloadCallback);
+				const msg = "Please wait a moment while the data are uploaded to the pavlovia.org server...";
+				const displayElement = this._jsPsych.getDisplayElement();
+				displayElement.innerHTML = '<pre id="pavlovia-data-upload"></pre>';
+				document.getElementById('pavlovia-data-upload').textContent = msg;
+				const sync = (typeof trial.sync !== 'undefined') ? trial.sync : false;
+				let response = await this._save(trial, data, sync);
+				this._log('finish | _save.response=', response);
+				if (('serverData' in response) && ('error' in response.serverData)) { throw response.serverData; }
+				response = await this._closeSession(true, false);
+				this._log('finish | _closeSession.response=', response);
+			}
+			catch (error) { trial.errorCallback(error); }
+		}
+		async _configure(configURL)
+		{
+			let response = { origin: '_configure', context: 'when configuring the plugin' };
+			try
+			{
+				const configurationResponse = await this._getConfiguration(configURL);
+				if ('psychoJsManager' in configurationResponse.config)
+				{
+					delete configurationResponse.config.psychoJsManager;
+					configurationResponse.config.pavlovia = { URL: 'https://pavlovia.org' };
+				}
+				if (!('experiment' in configurationResponse.config)) { throw 'missing experiment block in configuration'; }
+				if (!('name' in configurationResponse.config.experiment)) { throw 'missing name in experiment block in configuration'; }
+				if (!('fullpath' in configurationResponse.config.experiment)) { throw 'missing fullpath in experiment block in configuration'; }
+				if (!('pavlovia' in configurationResponse.config)) { throw 'missing pavlovia block in configuration'; }
+				if (!('URL' in configurationResponse.config.pavlovia)) { throw 'missing URL in pavlovia block in configuration'; }
+				const urlQuery = window.location.search.slice(1);
+				const urlParameters = new URLSearchParams(urlQuery);
+				urlParameters.forEach((value, key) =>
+				{
+					if (key.indexOf('__') === 0) { PavloviaPlugin._serverMsg.set(key, value); }
+				});
+				return configurationResponse;
+			}
+			catch (error) { throw { ...response, error }; }
+		}
+		_getConfiguration(configURL)
+		{
+			let response = { origin: '_getConfiguration', context: 'when reading the configuration file: ' + configURL };
+			return new Promise(async (resolve, reject) =>
+			{
+				try
+				{
+					const serverResponse = await fetch(configURL, {
+						method: "GET", mode: "cors", cache: "no-cache", credentials: "same-origin",
+						headers: { 'Content-Type': 'application/json' },
+						redirect: "follow", referrerPolicy: "no-referrer"
+					});
+					const serverData = await serverResponse.json();
+					resolve({ ...response, config: serverData });
+				}
+				catch (error) { console.error(error); reject({ ...response, error }); }
+			});
+		}
+		_openSession()
+		{
+			let response = { origin: '_openSession', context: 'when opening a session for experiment: ' + PavloviaPlugin._config.experiment.fullpath };
+			const formData = new FormData();
+			if (PavloviaPlugin._serverMsg.has('__pilotToken')) { formData.append('pilotToken', PavloviaPlugin._serverMsg.get('__pilotToken')); }
+			return new Promise(async (resolve, reject) =>
+			{
+				const url = `${PavloviaPlugin._config.pavlovia.URL}/api/v2/experiments/${PavloviaPlugin._config.gitlab.projectId}/sessions`;
+				try
+				{
+					const serverResponse = await fetch(url, {
+						method: "POST", mode: "cors", cache: "no-cache", credentials: "same-origin",
+						headers: { 'Content-Type': 'application/json' },
+						redirect: "follow", referrerPolicy: "no-referrer", body: formData
+					});
+					const serverData = await serverResponse.json();
+					if (!('token' in serverData)) { reject(Object.assign(response, { error: 'unexpected answer from server: no token'})); }
+					if (!('experiment' in serverData)) { reject(Object.assign(response, { error: 'unexpected answer from server: no experiment'})); }
+					PavloviaPlugin._config.session = { token: serverData.token, status: 'OPEN' };
+					PavloviaPlugin._config.experiment.status = serverData.experiment.status2;
+					PavloviaPlugin._config.experiment.saveFormat = Symbol.for(serverData.experiment.saveFormat);
+					PavloviaPlugin._config.experiment.saveIncompleteResults = serverData.experiment.saveIncompleteResults;
+					PavloviaPlugin._config.experiment.license = serverData.experiment.license;
+					PavloviaPlugin._config.runMode = serverData.experiment.runMode;
+					resolve( Object.assign(response, { token: serverData.token, status: serverData.experiment.status2 }) );
+				}
+				catch (error) { console.error(error); reject({ ...response, error }); }
+			});
+		}
+		_closeSession(isCompleted = true, sync = false)
+		{
+			let response = { origin: '_closeSession', context: 'when closing the session for experiment: ' + PavloviaPlugin._config.experiment.fullpath };
+			const url = PavloviaPlugin._config.pavlovia.URL + '/api/v2/experiments/' + PavloviaPlugin._config.gitlab.projectId + '/sessions/' + PavloviaPlugin._config.session.token;
+			const formData = new FormData();
+			formData.append('isCompleted', isCompleted);
+			if (sync)
+			{
+				navigator.sendBeacon(url + '/delete', formData);
+				PavloviaPlugin._config.session.status = 'CLOSED';
+			}
+			else
+			{
+				return new Promise(async (resolve, reject) =>
+				{
+					try
+					{
+						const serverResponse = await fetch(url, {
+							method: "DELETE", mode: "cors", cache: "no-cache", credentials: "same-origin",
+							redirect: "follow", referrerPolicy: "no-referrer", body: formData
+						});
+						const serverData = await serverResponse.json();
+						PavloviaPlugin._config.session.status = 'CLOSED';
+						resolve( Object.assign(response, { serverData }) );
+					}
+					catch (error) { console.error(error); reject({ ...response, error }); }
+				});
+			}
+		}
+		async _save(trial, data, sync = false)
+		{
+			const date = new Date();
+			let dateString = date.getFullYear() + '-' + ('0'+(1+date.getMonth())).slice(-2) + '-' + ('0'+date.getDate()).slice(-2) + '_';
+			dateString += ('0'+date.getHours()).slice(-2) + 'h' + ('0'+date.getMinutes()).slice(-2) + '.' + ('0'+date.getSeconds()).slice(-2) + '.' + date.getMilliseconds();
+			const key = PavloviaPlugin._config.experiment.name + '_' + trial.participantId + '_' + 'SESSION' + '_' + dateString + '.csv';
+			const filteredData = trial.dataFilter(data);
+			if (PavloviaPlugin._config.experiment.status === 'RUNNING' && !PavloviaPlugin._serverMsg.has('__pilotToken'))
+			{
+				return await this._uploadData(key, filteredData, sync);
+			}
+			else
+			{
+				this._offerDataForDownload(key, filteredData, 'text/csv');
+				return {
+					origin: '_save',
+					context: 'when saving results for experiment: ' + PavloviaPlugin._config.experiment.fullpath,
+					message: 'offered the .csv file for download'
+				};
+			}
+		}
+		_uploadData(key, value, sync = false)
+		{
+			let response = { origin: '_uploadData', context: 'when uploading participant\' results for experiment: ' + PavloviaPlugin._config.experiment.fullpath };
+			const url = PavloviaPlugin._config.pavlovia.URL + '/api/v2/experiments/' + PavloviaPlugin._config.gitlab.projectId + '/sessions/' + PavloviaPlugin._config.session.token + '/results';
+			const formData = new FormData();
+			formData.append('key', key);
+			formData.append('value', value);
+			if (sync) { navigator.sendBeacon(url, formData); }
+			else
+			{
+				return new Promise(async (resolve, reject) =>
+				{
+					try
+					{
+						const serverResponse = await fetch(url, {
+							method: "POST", mode: "cors", cache: "no-cache", credentials: "same-origin",
+							redirect: "follow", referrerPolicy: "no-referrer", body: formData
+						});
+						const serverData = await serverResponse.json();
+						resolve(Object.assign(response, { serverData }));
+					}
+					catch (error) { console.error(error); reject({ ...response, error }); }
+				});
+			}
+		}
+		_log(...messages) { console.log('[pavlovia ' + PavloviaPlugin.version + ']', ...messages); }
+		_offerDataForDownload(filename, data, type)
+		{
+			const blob = new Blob([data], { type });
+			if (window.navigator.msSaveOrOpenBlob) { window.navigator.msSaveBlob(blob, filename); }
+			else
+			{
+				const elem = window.document.createElement('a');
+				elem.href = window.URL.createObjectURL(blob);
+				elem.download = filename;
+				document.body.appendChild(elem);
+				elem.click();
+				document.body.removeChild(elem);
+			}
+		}
+	}
+	PavloviaPlugin.version = "2022.1.1";
+	PavloviaPlugin._config = {};
+	PavloviaPlugin._beforeunloadCallback = null;
+	PavloviaPlugin._serverMsg = new Map();
+	PavloviaPlugin.info = {
+		name: "pavlovia",
+		description: 'communication with pavlovia.org',
+		parameters: {
+			command: { type: jsPsych.ParameterType.STRING, pretty_name: 'Command', default: 'init', description: 'The pavlovia command: "init" (default) or "finish"' },
+			participantId: { type: jsPsych.ParameterType.STRING, pretty_name: 'Participant Id', default: 'PARTICIPANT', description: 'The participant Id: "PARTICIPANT" (default) or any string' },
+			errorCallback: { type: jsPsych.ParameterType.FUNCTION, pretty_name: 'ErrorCallback', default: PavloviaPlugin.defaultErrorCallback, description: 'The callback function called whenever an error has occurred' },
+			dataFilter: { type: jsPsych.ParameterType.FUNCTION, pretty_name: 'DataFilter', default: PavloviaPlugin.defaultDataFilter, description: 'The filter applied to the data gathered by jsPsych before upload to the server' }
+		}
+	};
+	return PavloviaPlugin;
+})(jsPsychModule);
+</script>
+
+<script>
+/* ============================================================
+   Custom plugin: NAD A–X–B target-detection trial (verbal & non-verbal)
+   - plays three audio elements with a fixed inter-element gap (WebAudio = accurate)
+   - two-choice key response; anticipatory responses allowed
+   - RT measured from the ONSET of the 3rd element (can be negative)
+   ============================================================ */
+(function(){
+  const PT = (window.jsPsychModule && window.jsPsychModule.ParameterType)
+           || {STRING:'STRING', BOOL:'BOOL', INT:'INT'};
+  class NadTrialPlugin {
+    constructor(jsPsych){ this.jsPsych = jsPsych; }
+    trial(display_element, trial){
+      const jsPsych = this.jsPsych;
+      const gap = trial.inter_element_ms/1000;
+      const targetKey = String(trial.target_key).toLowerCase();
+      const nonTargetKey = String(trial.nontarget_key).toLowerCase();
+
+      display_element.innerHTML = `
+        <div class="nad-stage">
+          <div class="nad-orb" id="nad-orb"><div class="nad-orb-core"></div></div>
+          <div class="nad-keys">
+            <div class="nad-key" id="nad-key-target"><div class="kcap">${String(trial.target_key).toUpperCase()}</div><div class="klab">TARGET sound</div></div>
+            <div class="nad-key" id="nad-key-other"><div class="kcap">${String(trial.nontarget_key).toUpperCase()}</div><div class="klab">any other</div></div>
+          </div>
+          <div class="nad-hint">Listen to the last sound, then press ${String(trial.target_key).toUpperCase()} or ${String(trial.nontarget_key).toUpperCase()} as quickly as you can.</div>
+        </div>`;
+      const orb = display_element.querySelector('#nad-orb');
+      const ctx = jsPsych.pluginAPI.audioContext();
+
+      let responded=false, response_key=null, rt=null, correct=null, bOnsetPerf=null, ended=false;
+      const cleanup = [];
+
+      function pulse(delay){
+        const t=setTimeout(()=>{ if(!orb)return; orb.classList.remove('pulse'); void orb.offsetWidth; orb.classList.add('pulse'); }, Math.max(0,delay));
+        cleanup.push(()=>clearTimeout(t));
+      }
+      function showFeedback(){
+        const stage = display_element.querySelector('.nad-stage'); if(!stage) return;
+        const fb=document.createElement('div');
+        if(!responded){ fb.className='nad-fb slow'; fb.textContent='Too slow'; }
+        else { fb.className='nad-fb '+(correct?'good':'bad'); fb.textContent=correct?'✓':'✗'; }
+        stage.appendChild(fb);
+      }
+      function conclude(){
+        if(ended) return; ended=true;
+        cleanup.forEach(fn=>fn());
+        const showFb = !!trial.feedback;
+        if(showFb) showFeedback();
+        const finish=()=>{ display_element.innerHTML=''; jsPsych.finishTrial({
+          screen:'nad_trial', task:trial.task, block_type:trial.block_type, block_index:trial.block_index,
+          trial_role:trial.trial_role, a_id:trial.a_id, x_id:trial.x_id, b_id:trial.b_id,
+          is_target:trial.is_target, response:response_key, rt:rt, correct:correct
+        }); };
+        if(showFb){ setTimeout(finish, 550); } else { finish(); }
+      }
+      const onKey=(e)=>{
+        const k=(e.key||'').toLowerCase();
+        if(k!==targetKey && k!==nonTargetKey) return;
+        if(responded) return;
+        responded=true;
+        const pressPerf=performance.now();
+        response_key=k;
+        rt=(bOnsetPerf!=null)?(pressPerf-bOnsetPerf):null;
+        correct = trial.is_target ? (k===targetKey) : (k===nonTargetKey);
+        const el = (k===targetKey)? display_element.querySelector('#nad-key-target') : display_element.querySelector('#nad-key-other');
+        if(el) el.classList.add('chosen');
+      };
+      document.addEventListener('keydown', onKey);
+      cleanup.push(()=>document.removeEventListener('keydown', onKey));
+
+      Promise.all([
+        jsPsych.pluginAPI.getAudioBuffer(trial.audioA),
+        jsPsych.pluginAPI.getAudioBuffer(trial.audioX),
+        jsPsych.pluginAPI.getAudioBuffer(trial.audioB)
+      ]).then(([bA,bX,bB])=>{
+        const webaudio = ctx && bA && typeof bA.getChannelData==='function';
+        if(webaudio){
+          if(ctx.state==='suspended'){ try{ctx.resume();}catch(e){} }
+          const mk=(buf)=>{ const s=ctx.createBufferSource(); s.buffer=buf; s.connect(ctx.destination); return s; };
+          const sA=mk(bA), sX=mk(bX), sB=mk(bB);
+          const t0=ctx.currentTime+0.12;
+          const tA=t0, tX=tA+bA.duration+gap, tB=tX+bX.duration+gap;
+          sA.start(tA); sX.start(tX); sB.start(tB);
+          cleanup.push(()=>{ [sA,sX,sB].forEach(s=>{try{s.stop();}catch(e){}}); });
+          const perf0=performance.now(), c0=ctx.currentTime;
+          const toPerf=(tc)=>perf0+(tc-c0)*1000;
+          bOnsetPerf=toPerf(tB);
+          pulse(toPerf(tA)-perf0); pulse(toPerf(tX)-perf0); pulse(toPerf(tB)-perf0);
+          const endDelay=(toPerf(tB)-perf0)+trial.response_window_ms;
+          const te=setTimeout(conclude, endDelay); cleanup.push(()=>clearTimeout(te));
+        } else {
+          // HTML5 <audio> fallback (less precise)
+          const dA=((bA&&bA.duration)||0.5)*1000, dX=((bX&&bX.duration)||0.6)*1000;
+          const play=(el,when)=>{ const t=setTimeout(()=>{ try{el.currentTime=0; el.play();}catch(e){} }, when); cleanup.push(()=>clearTimeout(t)); };
+          const whenX=dA+gap*1000, whenB=whenX+dX+gap*1000;
+          play(bA,0); play(bX,whenX); play(bB,whenB);
+          pulse(0); pulse(whenX); pulse(whenB);
+          const tb=setTimeout(()=>{ bOnsetPerf=performance.now(); }, whenB); cleanup.push(()=>clearTimeout(tb));
+          const te=setTimeout(conclude, whenB+trial.response_window_ms); cleanup.push(()=>clearTimeout(te));
+        }
+      });
+    }
+  }
+  NadTrialPlugin.info = {
+    name:'nad-trial',
+    parameters:{
+      audioA:{type:PT.STRING,default:undefined}, audioX:{type:PT.STRING,default:undefined}, audioB:{type:PT.STRING,default:undefined},
+      target_key:{type:PT.STRING,default:'f'}, nontarget_key:{type:PT.STRING,default:'j'},
+      is_target:{type:PT.BOOL,default:false},
+      inter_element_ms:{type:PT.INT,default:1000}, response_window_ms:{type:PT.INT,default:750},
+      feedback:{type:PT.BOOL,default:false},
+      task:{type:PT.STRING,default:'verbal'}, block_type:{type:PT.STRING,default:''}, block_index:{type:PT.INT,default:0},
+      trial_role:{type:PT.STRING,default:''}, a_id:{type:PT.STRING,default:''}, x_id:{type:PT.STRING,default:''}, b_id:{type:PT.STRING,default:''}
+    }
+  };
+  window.jsPsychNadTrial = NadTrialPlugin;
+})();
+
+/* ============================================================
+   Verbal NAD task builder. Returns an array of timeline nodes.
+   All counts/timing are in CFG below — adjust there (Dumont 2025 defaults).
+   ============================================================ */
+function buildNadTask(jsPsych, opts){
+  const DIR=opts.DIR;
+  const A=opts.A, B=opts.B, F=opts.F, X=opts.X;
+  const allFiles=[].concat(A,B,F,X).map(o=>DIR+o.file);
+
+  // ---------- CONFIG (Dumont et al. 2025 defaults — confirm before main run) ----------
+  const CFG={
+    nTraining:4,   // was 6 (Dumont default); reduced to shorten session — confirm with supervisor
+    perBlock:{target:12, nonTarget:12, filler:6},   // 30 trials/block
+    interElementMs:1000,
+    responseWindowMs:1000,   // was 750 (Dumont child default); widened for adult online sample — see note
+    practiceTrials:8,
+    targetKey:'f', nonTargetKey:'j',
+    itiMs:400,
+    breakEvery:2     // short break after every N training blocks
+  };
+
+  // ---------- counterbalancing (stored in data) ----------
+  const pairing = jsPsych.randomization.sampleWithoutReplacement([0,1],1)[0];   // 0: A1→B1,A2→B2 ; 1: A1→B2,A2→B1
+  const targetBIdx = jsPsych.randomization.sampleWithoutReplacement([0,1],1)[0];
+  const nonTargetBIdx = 1-targetBIdx;
+  const predictorOf=(bIdx)=> (pairing===0)? bIdx : (1-bIdx);   // index in A predicting B[bIdx]
+  const aForTarget=A[predictorOf(targetBIdx)];
+  const aForNonTarget=A[predictorOf(nonTargetBIdx)];
+  const cbProps={}; cbProps[opts.task+'_pairing']=pairing; cbProps[opts.task+'_target_b']=B[targetBIdx].id; cbProps[opts.task+'_a_for_target']=aForTarget.id;
+  jsPsych.data.addProperties(cbProps);
+
+  // ---------- X dispenser: each X used ~equally, no local predictability ----------
+  let xQueue=[];
+  const nextX=()=>{ if(xQueue.length===0){ xQueue=jsPsych.randomization.shuffle(X.slice()); } return xQueue.pop(); };
+  const pick=(arr)=>arr[Math.floor(Math.random()*arr.length)];
+
+  function mkTrial(e1,x,b,role,isTarget,blockType,blockIndex,feedback){
+    return {
+      type: window.jsPsychNadTrial,
+      audioA:DIR+e1.file, audioX:DIR+x.file, audioB:DIR+b.file,
+      target_key:CFG.targetKey, nontarget_key:CFG.nonTargetKey,
+      is_target:isTarget, inter_element_ms:CFG.interElementMs, response_window_ms:CFG.responseWindowMs,
+      feedback:!!feedback, task:opts.task, block_type:blockType, block_index:blockIndex,
+      trial_role:role, a_id:e1.id, x_id:x.id, b_id:b.id,
+      post_trial_gap:CFG.itiMs
+    };
+  }
+  // mode: 'intact' (A predicts B) or 'disrupted' (filler in A position)
+  function makeTrials(mode, blockType, blockIndex, feedback){
+    const list=[]; const tgt=B[targetBIdx], ntg=B[nonTargetBIdx];
+    for(let i=0;i<CFG.perBlock.target;i++){ const e1=(mode==='intact')?aForTarget:pick(F); list.push(mkTrial(e1,nextX(),tgt,'target',true,blockType,blockIndex,feedback)); }
+    for(let i=0;i<CFG.perBlock.nonTarget;i++){ const e1=(mode==='intact')?aForNonTarget:pick(F); list.push(mkTrial(e1,nextX(),ntg,'nonTarget',false,blockType,blockIndex,feedback)); }
+    for(let i=0;i<CFG.perBlock.filler;i++){ const isT=Math.random()<0.5; list.push(mkTrial(pick(F),nextX(),isT?tgt:ntg,'filler',isT,blockType,blockIndex,feedback)); }
+    return jsPsych.randomization.shuffle(list);
+  }
+
+  const btn=(stim,label)=>({ type:jsPsychHtmlButtonResponse, stimulus:stim, choices:[label||'Continue'] });
+  const targetFile=DIR+B[targetBIdx].file, otherFile=DIR+B[nonTargetBIdx].file;
+
+  // Block intro WITH an acoustic target reminder (same on every block — training, disruption,
+  // recovery — so it is a constant, not a confound). Acoustic only (not spelled out) and the
+  // target B is played in isolation, so it does not reveal the A→B dependency.
+  function blockIntro(n){
+    return { type:jsPsychHtmlButtonResponse, stimulus:`<div class="task-card">
+      <div class="welcome-title">Block ${n}</div>
+      <p>Quick reminder: listen to the <b>last</b> sound of each clip. Press
+         <b>${CFG.targetKey.toUpperCase()}</b> when a clip ends with the <b style="color:#2f7d3a;">TARGET</b> sound below, and
+         <b>${CFG.nonTargetKey.toUpperCase()}</b> for anything else. Have a listen, then begin.</p>
+      <div class="demo-row"><span class="demo-tag" style="color:#2f7d3a;">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
+    </div>`, choices:['Start block'] };
+  }
+
+  const tl=[];
+  // (audio is preloaded once up front, before the questionnaires — see runExperiment)
+
+  // instructions + target demo  (second task gets a short "same game, new sounds" recap)
+  if (opts.isSecond){
+    tl.push(btn(`<div class="task-card">
+      <div class="welcome-title">Second listening game</div>
+      <p>This game works <b>exactly the same way</b> as the last one: listen to the <b>last</b> sound of each clip, then press
+         <b>${CFG.targetKey.toUpperCase()}</b> if it is the <b style="color:#2f7d3a;">TARGET</b> sound and
+         <b>${CFG.nonTargetKey.toUpperCase()}</b> for any other sound.</p>
+      <p>The only difference is that it uses <b>${opts.soundNoun}</b> instead, so there is a <b>new target sound</b> to learn. You'll hear it on the next screen and can practise first.</p>
+    </div>`, 'Next'));
+  } else {
+    tl.push(btn(`<div class="task-card">
+      <div class="welcome-title">Listening game</div>
+      <p>You will hear short clips. Each clip is <b>three ${opts.soundNoun}</b> played one after another. After the last sound, you decide what it was:</p>
+      <ul class="rules">
+        <li><b class="k">${CFG.targetKey.toUpperCase()}</b> the clip ends with the <b style="color:#2f7d3a;">TARGET</b> sound</li>
+        <li><b class="k">${CFG.nonTargetKey.toUpperCase()}</b> the clip ends with <b>any other</b> sound</li>
+      </ul>
+      <p>You will hear the target sound on the next screen, and you can practise before the real game starts. Keep one finger on <b>${CFG.targetKey.toUpperCase()}</b> and one on <b>${CFG.nonTargetKey.toUpperCase()}</b>, and respond <b>as quickly and accurately as you can</b>.</p>
+    </div>`, 'Next'));
+  }
+
+  tl.push(btn(`<div class="task-card">
+    <div class="welcome-title">This is the target sound</div>
+    <p>Listen to it a few times so you can recognise it. Press <b>${CFG.targetKey.toUpperCase()}</b> whenever a clip ends with this sound.</p>
+    <div class="demo-row"><span class="demo-tag" style="color:#2f7d3a;">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
+    <p style="margin-top:18px;">Here is an example of a different (non-target) sound — for these you would press <b>${CFG.nonTargetKey.toUpperCase()}</b>:</p>
+    <div class="demo-row"><span class="demo-tag">other (${CFG.nonTargetKey.toUpperCase()}):</span><audio controls preload="auto" src="${otherFile}"></audio></div>
+  </div>`, "I've learned the target — let's practise"));
+
+  // practice (with feedback)
+  tl.push(btn(`<div class="task-card"><div class="welcome-title">Practice</div>
+    <p>Let's try a few clips. You'll get feedback (✓ / ✗) so you can get used to it.</p>
+    <p>Keep your fingers on <b>${CFG.targetKey.toUpperCase()}</b> and <b>${CFG.nonTargetKey.toUpperCase()}</b>.</p></div>`, 'Start practice'));
+  // build a short practice set (intact)
+  const practiceSet=[]; const tgt=B[targetBIdx], ntg=B[nonTargetBIdx];
+  for(let i=0;i<CFG.practiceTrials;i++){
+    if(i%2===0) practiceSet.push(mkTrial(aForTarget,nextX(),tgt,'target',true,'practice',0,true));
+    else practiceSet.push(mkTrial(aForNonTarget,nextX(),ntg,'nonTarget',false,'practice',0,true));
+  }
+  tl.push({ timeline: jsPsych.randomization.shuffle(practiceSet) });
+
+  tl.push(btn(`<div class="task-card"><div class="welcome-title">Ready</div>
+    <p>Great — the real game starts now. There is <b>no</b> feedback from here on; just respond to the last sound as fast and accurately as you can.</p>
+    <p>It runs in several short blocks with breaks in between.</p></div>`, 'Begin'));
+
+  // 6 training blocks (+ breaks), 1 disruption, 1 recovery — block intros are generic (no hint of disruption)
+  let bi=0;
+  for(let b=1;b<=CFG.nTraining;b++){
+    bi++;
+    tl.push(blockIntro(bi));
+    tl.push({ timeline: makeTrials('intact','training',bi,false) });
+    if(b<CFG.nTraining && b%CFG.breakEvery===0){
+      tl.push(btn(`<div class="task-card"><div class="welcome-title">Short break</div>
+        <p>Take a moment to rest your eyes and ears. When you're ready, continue.</p></div>`, "I'm ready to continue"));
+    }
+  }
+  // disruption
+  bi++;
+  tl.push(blockIntro(bi));
+  tl.push({ timeline: makeTrials('disrupted','disruption',bi,false) });
+  // recovery
+  bi++;
+  tl.push(blockIntro(bi));
+  tl.push({ timeline: makeTrials('intact','recovery',bi,false) });
+
+  tl.push(btn(`<div class="task-card"><div class="welcome-title">End of the listening game</div>
+    <p>Well done — that part is complete. Thank you!</p></div>`, 'Continue'));
+
+  return tl;
+}
+
+/* ---- Verbal task: spoken pseudoword audio (mp3 in audio_verbal/) ---- */
+function buildVerbalTask(jsPsych, isSecond){
+  const DIR='audio_verbal/';
+  const A=[{id:'A1',file:'A1_vup.mp3'},{id:'A2',file:'A2_gik.mp3'}];
+  const B=[{id:'B1',file:'B1_wod.mp3'},{id:'B2',file:'B2_mip.mp3'}];
+  const F=[{id:'F1',file:'Filler1_kud.mp3'},{id:'F2',file:'Filler2_rul.mp3'},{id:'F3',file:'Filler3_hib.mp3'},{id:'F4',file:'Filler4_wub.mp3'}];
+  const Xn=['X01_nupen','X02_lobat','X03_tasom','X04_basut','X05_sapet','X06_rilom','X07_solug','X08_rinag','X09_tilop','X10_rodup','X11_lemip','X12_tabig','X13_tobir','X14_lebam','X15_nabem','X16_debog','X17_tanab','X18_redib','X19_lobun','X20_rinur','X21_dolet','X22_sabip','X23_solib','X24_sunic'];
+  const X=Xn.map((f,i)=>({id:'X'+String(i+1).padStart(2,'0'), file:f+'.mp3'}));
+  return buildNadTask(jsPsych, { task:'verbal', DIR, A, B, F, X, soundNoun:'made-up spoken sounds', isSecond:!!isSecond });
+}
+
+/* ---- Non-verbal task: musical tone audio (wav in audio_nonverbal/) ---- */
+function buildNonverbalTask(jsPsych, isSecond){
+  const DIR='audio_nonverbal/';
+  const A=[{id:'A1',file:'NV_A1_C5.wav'},{id:'A2',file:'NV_A2_F5.wav'}];
+  const B=[{id:'B1',file:'NV_B1_C6.wav'},{id:'B2',file:'NV_B2_F6.wav'}];
+  const F=[{id:'F1',file:'NV_Filler1_G5.wav'},{id:'F2',file:'NV_Filler2_A5.wav'},{id:'F3',file:'NV_Filler3_A6.wav'},{id:'F4',file:'NV_Filler4_B6.wav'}];
+  const Xn=['NV_X01_C4-E4','NV_X02_D4-F4','NV_X03_E4-G4','NV_X04_F4-A4','NV_X05_G4-B4','NV_X06_A4-C5','NV_X07_B4-D4','NV_X08_C5-E4','NV_X09_C4-G4','NV_X10_D4-A4','NV_X11_E4-B4','NV_X12_F4-C5','NV_X13_G4-C4','NV_X14_A4-D4','NV_X15_B4-E4','NV_X16_C5-F4','NV_X17_C4-F4','NV_X18_D4-G4','NV_X19_E4-A4','NV_X20_F4-B4','NV_X21_G4-D4','NV_X22_A4-E4','NV_X23_B4-F4','NV_X24_C5-G4'];
+  const X=Xn.map((f,i)=>({id:'X'+String(i+1).padStart(2,'0'), file:f+'.wav'}));
+  return buildNadTask(jsPsych, { task:'nonverbal', DIR, A, B, F, X, soundNoun:'short musical sounds', isSecond:!!isSecond });
+}
+
+/* All audio files for both tasks — used for a single up-front preload so there is no
+   loading screen right before each task (smoother, and no flash on cached loads). */
+function allNadAudioFiles(){
+  const v=['A1_vup','A2_gik','B1_wod','B2_mip','Filler1_kud','Filler2_rul','Filler3_hib','Filler4_wub','X01_nupen','X02_lobat','X03_tasom','X04_basut','X05_sapet','X06_rilom','X07_solug','X08_rinag','X09_tilop','X10_rodup','X11_lemip','X12_tabig','X13_tobir','X14_lebam','X15_nabem','X16_debog','X17_tanab','X18_redib','X19_lobun','X20_rinur','X21_dolet','X22_sabip','X23_solib','X24_sunic'].map(f=>'audio_verbal/'+f+'.mp3');
+  const nv=['NV_A1_C5','NV_A2_F5','NV_B1_C6','NV_B2_F6','NV_Filler1_G5','NV_Filler2_A5','NV_Filler3_A6','NV_Filler4_B6','NV_X01_C4-E4','NV_X02_D4-F4','NV_X03_E4-G4','NV_X04_F4-A4','NV_X05_G4-B4','NV_X06_A4-C5','NV_X07_B4-D4','NV_X08_C5-E4','NV_X09_C4-G4','NV_X10_D4-A4','NV_X11_E4-B4','NV_X12_F4-C5','NV_X13_G4-C4','NV_X14_A4-D4','NV_X15_B4-E4','NV_X16_C5-F4','NV_X17_C4-F4','NV_X18_D4-G4','NV_X19_E4-A4','NV_X20_F4-B4','NV_X21_G4-D4','NV_X22_A4-E4','NV_X23_B4-F4','NV_X24_C5-G4'].map(f=>'audio_nonverbal/'+f+'.wav');
+  return v.concat(nv);
+}
+</script>
+
+
+<script>
+window.onerror = function(message, source, lineno) {
+  var box = document.getElementById('error-box');
+  if (box) { box.style.display='block'; box.textContent = "Error: " + message + "\n(line " + lineno + ")\nSource: " + source; }
+  return false;
+};
+
+window.addEventListener('load', function() {
+  var problems = [];
+  if (typeof initJsPsych === 'undefined') problems.push("jsPsych core did NOT load");
+  if (typeof jsPsychHtmlKeyboardResponse === 'undefined') problems.push("html-keyboard-response did NOT load");
+  if (typeof jsPsychSurveyHtmlForm === 'undefined') problems.push("survey-html-form did NOT load");
+  if (typeof jsPsychPavlovia === 'undefined') problems.push("Pavlovia plugin did NOT load");
+
+  if (problems.length > 0) {
+    var box = document.getElementById('error-box');
+    box.style.display='block';
+    box.textContent = "Some libraries failed to load:\n\n" + problems.join("\n");
+    return;
+  }
+  runExperiment();
+});
+
+function runExperiment() {
+  const jsPsych = initJsPsych({ default_iti: 200, on_finish: function(){ jsPsych.data.displayData(); } });
+
+  // --- Capture Prolific ID from the URL (e.g. ?PROLIFIC_PID=xxxx). Defaults if absent. ---
+  const urlParams = new URLSearchParams(window.location.search);
+  const prolificID = urlParams.get('PROLIFIC_PID') || 'NO_PROLIFIC_ID';
+  const studyID    = urlParams.get('STUDY_ID') || '';
+  const sessionID  = urlParams.get('SESSION_ID') || '';
+  jsPsych.data.addProperties({ prolific_id: prolificID, study_id: studyID, session_id: sessionID });
+
+  // Only talk to the Pavlovia server when actually running on run.pavlovia.org.
+  // Anywhere else (local file, GitLab preview) we skip it so the study can still be tested.
+  const ON_PAVLOVIA = location.hostname.indexOf('run.pavlovia.org') !== -1;
+
+  const timeline = [];
+  if (ON_PAVLOVIA) {
+    timeline.push({ type: jsPsychPavlovia, command: "init" });
+  }
+
+  // ============ INFORMATION SHEET ============
+  timeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+      <div class="doc-wrap">
+        <div class="doc-title">Participant Information Sheet</div>
+        <div class="doc-subtitle">An online study of sound-pattern learning</div>
+        <div class="scroll-box">
+          <p class="doc-meta"><b>UCL Research Ethics Committee Approval ID:</b> 4620</p>
+          <p class="doc-meta"><i>You may save or print a copy of this information sheet for your records.</i></p>
+          <p class="doc-meta"><b>Title of Study:</b> Modality Specificity of Non-Adjacent Dependency Learning in Autistic Adults with a History of Unexpected Bilingualism</p>
+          <p class="doc-meta"><b>Department:</b> Linguistics, Division of Psychology and Language Sciences, UCL</p>
+          <p class="doc-meta"><b>Researcher:</b> Jinghan Chen (jinghan.chen.25@ucl.ac.uk)</p>
+          <p class="doc-meta"><b>Principal Researcher / Supervisor:</b> Professor Mikhail Kissine (m.kissine@ucl.ac.uk)</p>
+
+          <h3>Invitation</h3>
+          <p>You are being invited to take part in a research project. Before you decide, it is important for you to understand why the research is being done and what taking part will involve. Please read the following information carefully and ask us if anything is unclear or if you would like more information. Take your time to decide whether you wish to take part. Thank you for reading this.</p>
+
+          <h3>What is the project's purpose?</h3>
+          <p>This project studies how adults learn patterns in sequences of sounds. People are very good at picking up regularities in what they hear, for example, in language. We are interested in how adults learn a particular kind of pattern (where an earlier sound predicts a later one), both in spoken nonsense words and in musical tones, and how this relates to people's language background and to autism. The study is being carried out as part of a Master's dissertation. Taking part involves a single online session of approximately 35 minutes.</p>
+
+          <h3>Why have I been chosen?</h3>
+          <p>You have been invited because you are an adult aged 18&ndash;65, are a fluent English speaker, and have signed up to take part in research through the Prolific platform. We are recruiting people both with and without a diagnosis of autism, and with a range of language backgrounds. We aim to recruit around 200 participants in total. To take part you should have normal or corrected-to-normal hearing and be able to use headphones.</p>
+
+          <h3>Do I have to take part?</h3>
+          <p>It is up to you to decide whether or not to take part. If you do decide to take part you will be able to keep this information sheet and will be asked to agree to a consent form before starting. You can withdraw at any time, without giving a reason and without any penalty, simply by closing your browser. If you withdraw during the study, any partial data will be deleted. After completing the study, you can ask us to remove your data by quoting your Prolific ID, up to two weeks after completion, after which the data will have been anonymised and aggregated and can no longer be identified or removed.</p>
+
+          <h3>What will happen to me if I take part?</h3>
+          <p>The study takes place entirely online, in your web browser, in a single session of approximately 35 minutes. You will: (1) read this information and give consent; (2) complete a short sound/headphone check; (3) answer some questionnaires about your background and language history, and a short standardized questionnaire about social and everyday preferences (the Autism-Spectrum Quotient), which is completed by everyone taking part; (4) complete two listening tasks, one using spoken nonsense words and one using musical tones, in which you listen to sequences and press a key in response; (5) answer a few short questions about your experience of the tasks. There are no right or wrong answers in the questionnaires. You will be reimbursed for your time through Prolific (&pound;5).</p>
+
+          <h3>Will I be recorded?</h3>
+          <p>No audio or video recordings of you are made. The study only records your responses (key presses and answers) within the online task.</p>
+
+          <h3>What are the possible disadvantages and risks of taking part?</h3>
+          <p>The risks are minimal. The tasks involve only listening and pressing keys and answering questionnaires. You may find the listening task a little repetitive, and some questions ask about your autism diagnosis (if any) and language background; you may skip questions you prefer not to answer and may stop at any time. To allow the tasks to work as intended, the listening behavior we are studying is not described in full before you begin; it will be explained to you at the end of the study.</p>
+
+          <h3>What are the possible benefits of taking part?</h3>
+          <p>You will gain &pound;5 as reimbursement for your time. It is hoped that the research will improve understanding of how adults (including autistic adults) learn patterns in sound and language, which may inform future research and support.</p>
+
+          <h3>What if something goes wrong?</h3>
+          <p>If you have a concern or complaint about any aspect of the study, please contact the researcher or the supervisor (details above) in the first instance. If you feel your complaint has not been handled to your satisfaction, you can contact the Chair of the UCL Research Ethics Committee at ethics@ucl.ac.uk.</p>
+
+          <h3>Will my taking part be kept confidential?</h3>
+          <p>Yes. You take part anonymously: we identify your responses only by your Prolific ID, and we do not collect your name or contact details. The link between your Prolific ID and your identity is held by Prolific, not by the research team, and we have no way to access it. The research team therefore cannot identify you, and you will not be identifiable in any report or publication.</p>
+
+          <h3>Limits to confidentiality</h3>
+          <p>Confidentiality will be respected subject to legal constraints and professional guidelines. Because the data we hold are anonymous to us, we are not able to link responses back to individuals.</p>
+
+          <h3>Explanation at the end of the study (full purpose)</h3>
+          <p>Research of this kind requires that the specific pattern being studied is not described in full before you take part. Although we have described the general nature of the tasks, the full purpose will be explained to you on a debrief screen at the end of the study. At that point you may still choose to withdraw your data.</p>
+
+          <h3>What will happen to the results?</h3>
+          <p>The results will be written up as a Master's dissertation and may be presented at academic conferences or published in a peer-reviewed journal. You will not be identified in any output. Anonymous data may be shared in a public research repository (such as the Open Science Framework) to support open science. As the data are anonymous, individual participants cannot be identified in any shared dataset.</p>
+
+          <h3>Data protection and storage</h3>
+          <p>The study is designed so that the data held by the research team are anonymous: responses are labelled only with a Prolific ID, and the research team have no access to the key linking that ID to an identifiable person. Anonymous research data will be stored securely on UCL systems and will be retained for at least 10 years in line with UCL's research data policy. Any general questions about how UCL handles data can be directed to the UCL Data Protection Officer at data-protection@ucl.ac.uk.</p>
+
+          <h3>Who is organizing and funding the research?</h3>
+          <p>The research is organised by the researcher and supervisor in the Department of Linguistics (Division of Psychology and Language Sciences), UCL. It is not externally funded; participant reimbursement is supported by the Department and by the supervisor's research funds. There is no external commercial funder and no restriction on publication of the findings.</p>
+
+          <h3>Contact for further information</h3>
+          <p>For further information, please get in touch with the researcher, Jinghan Chen (jinghan.chen.25@ucl.ac.uk), or the supervisor, Professor Mikhail Kissine (m.kissine@ucl.ac.uk).</p>
+
+          <p><i>Thank you for reading this information sheet and for considering taking part in this research.</i></p>
+        </div>
+      </div>`,
+    choices: ["I have read the information sheet &mdash; continue"],
+    data: { screen: "information_sheet" }
+  });
+
+  // ============ CONSENT FORM ============
+  timeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+      <div class="doc-wrap">
+        <div class="doc-title">Consent Form for Adult Participants</div>
+        <div class="doc-subtitle">An online study of sound-pattern learning</div>
+        <p class="doc-meta"><b>Title of Study:</b> Modality Specificity of Non-Adjacent Dependency Learning in Autistic Adults with a History of Unexpected Bilingualism</p>
+        <p class="doc-meta"><b>Approved by the UCL Research Ethics Committee &mdash; Project ID:</b> 4620</p>
+        <p class="doc-meta">Please read this form after you have read the Information Sheet. If you have any questions, please contact the researcher before you decide whether to take part.</p>
+
+        <div class="consent-intro">
+          By clicking <b>"I CONFIRM MY PARTICIPATION"</b> below, you confirm that you have read and understood the Information Sheet, that you agree with each of the statements below, and that you wish to take part. You may save or print this page for your records. <b>If you do not wish to take part, click "I do not wish to take part" below.</b>
+        </div>
+
+        <p><i>By continuing, I confirm that:</i></p>
+        <ul class="consent-list">
+          <li>I have read and understood the Information Sheet for the above study, and I have had the opportunity to consider the information and to ask questions.</li>
+          <li>I understand that taking part is voluntary and that I am free to withdraw at any time, without giving a reason and without penalty, by closing my browser. If I withdraw during the study, any partial data I have provided will be deleted.</li>
+          <li>I understand that I can request removal of my data after completing the study by quoting my Prolific ID, up to two weeks after completion, after which the data will be anonymized and aggregated and can no longer be identified or removed.</li>
+          <li>I consent to take part in the study. I understand that I will complete questionnaires (including questions about my language background and any autism diagnosis) and two listening tasks, and that my responses (key presses and answers) will be recorded.</li>
+          <li>I understand that I take part anonymously: my responses are identified only by my Prolific ID, that the link between this ID and my identity is held by Prolific and not by the research team, and that the research team cannot identify me.</li>
+          <li>I understand that I will not be identifiable in any report, publication, or shared dataset arising from this research.</li>
+          <li>I understand that the specific pattern being studied is not described in full before I begin, and that the full purpose will be explained on a debrief screen at the end, at which point I may still withdraw my data.</li>
+          <li>I understand the potential risks of participating, that the tasks involve only listening, key presses and answering questionnaires, and that I may skip questions I prefer not to answer.</li>
+          <li>I understand that I will be reimbursed for my time through Prolific, and that I will not otherwise benefit financially from this study.</li>
+          <li>I understand that the data will not be made available to any commercial organization and are the responsibility of the researcher(s) undertaking the study.</li>
+          <li>I agree that my anonymous research data may be shared and used by other researchers for future research. No one will be able to identify me from this data.</li>
+          <li>I am aware of who to contact if I wish to raise a concern or complaint (the researcher, supervisor, or the Chair of the UCL Research Ethics Committee at ethics@ucl.ac.uk).</li>
+          <li>I voluntarily agree to take part in this study.</li>
+        </ul>
+        <p class="doc-meta"><i>A record of your consent (your Prolific ID and the date) will be stored with the anonymous dataset when you continue.</i></p>
+        <p class="decline-note">If you do not wish to take part, click <b>"I do not wish to take part"</b> below. No data will be saved and the study will end.</p>
+      </div>`,
+    choices: ["I CONFIRM MY PARTICIPATION", "I do not wish to take part"],
+    button_html: [
+      '<button class="jspsych-btn">%choice%</button>',
+      '<button class="jspsych-btn btn-decline">%choice%</button>'
+    ],
+    data: { screen: "consent" },
+    on_finish: function(data){
+      if (data.response === 0) {
+        // Participant confirmed
+        data.consented = true;
+        data.consent_time = new Date().toISOString();
+        jsPsych.data.addProperties({ consented: true, consent_time: data.consent_time });
+      } else {
+        // Participant declined -> end the study immediately, no further data collected
+        data.consented = false;
+        jsPsych.endExperiment(
+          '<div class="doc-wrap" style="text-align:center;">' +
+          '<div class="welcome-title">Thank you</div>' +
+          '<p>You have chosen not to take part. No data has been saved.</p>' +
+          '<p class="subtle">You may now close this tab and return your submission on Prolific.</p>' +
+          '</div>'
+        );
+      }
+    }
+  });
+
+  // ---- Preload ALL task audio once, up front (loads while participant answers questionnaires) ----
+  timeline.push({
+    type: jsPsychPreload,
+    audio: allNadAudioFiles(),
+    message: '<div class="q-wrap"><p style="font-size:18px;">Getting things ready… please wait a moment.</p></div>',
+    show_progress_bar: true,
+    continue_after_error: false,
+    error_message: '<div class="q-wrap"><p>Some sounds could not be loaded. Please check your internet connection and refresh the page to try again.</p></div>'
+  });
+
+  // =====================================================================
+  // ==============  SECTION B2: SCREENING + QUESTIONNAIRES  ==============
+  // =====================================================================
+
+  // ---- Q1: Hearing (eligibility) ----
+  timeline.push({
+    type: jsPsychSurveyHtmlForm,
+    preamble: `<div class="q-wrap"><div class="doc-title">Before we begin</div>
+      <p>A few quick questions so we can make sure the study works properly for you.</p></div>`,
+    html: `<div class="q-wrap"><div class="q-block" style="border-bottom:none;">
+      <label class="q-label">1. Do you have normal or corrected-to-normal hearing?
+        <span class="q-hint">(you hear normally, possibly with a hearing aid)</span></label>
+      <label class="opt"><input type="radio" name="hearing" value="yes" required> Yes</label>
+      <label class="opt"><input type="radio" name="hearing" value="no"> No</label>
+      <div class="cond-detail">If no, please briefly describe:<br>
+        <input type="text" name="hearing_detail" style="width:100%;"></div>
+    </div></div>`,
+    button_label: "Continue",
+    data: { screen: "eligibility" }
+  });
+
+  // ---- Q2: Headphone check (loops with a reminder until "yes") ----
+  const headphoneCheck = {
+    type: jsPsychSurveyHtmlForm,
+    preamble: `<div class="q-wrap"><div class="doc-title">Headphone check</div>
+      <p>This study uses sound, so you need to wear headphones or earphones.</p></div>`,
+    html: `<div class="q-wrap"><div class="q-block" style="border-bottom:none;">
+      <label class="q-label">2. Are you wearing headphones or earphones right now?</label>
+      <label class="opt"><input type="radio" name="headphones" value="yes" required> Yes, I am wearing them</label>
+      <label class="opt"><input type="radio" name="headphones" value="no"> No, not yet</label>
+    </div></div>`,
+    button_label: "Continue",
+    data: { screen: "headphone_check" }
+  };
+  const headphoneReminder = {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<div class="q-wrap"><div class="doc-title">Please put on your headphones</div>
+      <p>The listening tasks won't work properly without headphones or earphones.
+      Please put them on now, then continue.</p></div>`,
+    choices: ["I have my headphones on now"],
+    data: { screen: "headphone_reminder" }
+  };
+  timeline.push({
+    timeline: [
+      headphoneCheck,
+      {
+        timeline: [headphoneReminder],
+        conditional_function: function(){
+          const last = jsPsych.data.get().filter({screen:'headphone_check'}).last(1).values()[0];
+          return last.response.headphones === 'no';
+        }
+      }
+    ],
+    loop_function: function(){
+      const last = jsPsych.data.get().filter({screen:'headphone_check'}).last(1).values()[0];
+      return last.response.headphones === 'no';
+    }
+  });
+
+  // ---- Q3: Autism diagnosis ----
+  timeline.push({
+    type: jsPsychSurveyHtmlForm,
+    preamble: `<div class="q-wrap"><div class="doc-title">About you</div></div>`,
+    html: `<div class="q-wrap"><div class="q-block" style="border-bottom:none;">
+      <label class="q-label">3. Have you received a formal diagnosis of autism (or Asperger syndrome)
+        from a qualified professional or team of professionals?</label>
+      <label class="opt"><input type="radio" name="autism_dx" value="yes" required> Yes</label>
+      <label class="opt"><input type="radio" name="autism_dx" value="no"> No</label>
+    </div></div>`,
+    button_label: "Continue",
+    data: { screen: "autism_dx" }
+  });
+
+  // ---- Q4–Q5: only shown if diagnosed ----
+  const autismDetail = {
+    type: jsPsychSurveyHtmlForm,
+    preamble: `<div class="q-wrap"><p>A couple of follow-up questions about your diagnosis.</p></div>`,
+    html: `<div class="q-wrap">
+      <div class="q-block">
+        <label class="q-label">4. How old were you when you were diagnosed?
+          <span class="q-hint">(age in years)</span></label>
+        <input type="text" name="dx_age" inputmode="numeric" pattern="0|[1-9][0-9]?" placeholder=" "
+          title="Enter a whole number of years, with no leading zero (e.g. 8, not 08)" required>
+        <span class="err-hint">Please enter a whole number of years (e.g. 8), with no leading zero.</span>
+      </div>
+      <div class="q-block" style="border-bottom:none;">
+        <label class="q-label">5. Do you have any co-occurring conditions?
+          <span class="q-hint">(select all that apply)</span></label>
+        <label class="opt"><input type="checkbox" name="cooccur_adhd" value="1"> ADHD</label>
+        <label class="opt"><input type="checkbox" name="cooccur_dyslexia" value="1"> Dyslexia</label>
+        <label class="opt"><input type="checkbox" name="cooccur_dld" value="1"> Developmental language disorder</label>
+        <label class="opt"><input type="checkbox" name="cooccur_none" value="1"> None</label>
+        <label class="opt"><input type="checkbox" name="cooccur_other" value="1"> Other</label>
+        <div class="other-text"><input type="text" name="cooccur_other_text" placeholder="If other, please specify"></div>
+      </div>
+    </div>`,
+    button_label: "Continue",
+    data: { screen: "autism_dx_detail" }
+  };
+  timeline.push({
+    timeline: [autismDetail],
+    conditional_function: function(){
+      const last = jsPsych.data.get().filter({screen:'autism_dx'}).last(1).values()[0];
+      return last.response.autism_dx === 'yes';
+    }
+  });
+
+  // ---- Q6: Any other languages? (gate) ----
+  timeline.push({
+    type: jsPsychSurveyHtmlForm,
+    preamble: `<div class="q-wrap"><div class="doc-title">Your language background</div></div>`,
+    html: `<div class="q-wrap"><div class="q-block" style="border-bottom:none;">
+      <label class="q-label">6. Besides English, do you have at least some knowledge of one or more other languages?</label>
+      <label class="opt"><input type="radio" name="lang_any" value="yes" required> Yes</label>
+      <label class="opt"><input type="radio" name="lang_any" value="no"> No, English only</label>
+    </div></div>`,
+    button_label: "Continue",
+    data: { screen: "lang_gate" }
+  });
+
+  // ---- Q7–Q13: multi-language LOOP (one language per pass) ----
+  let langIndex = 0;
+  const MAX_LANGS = 6;   // safety cap to prevent an endless loop
+
+  // Language suggestions for type-ahead (avoids spelling errors). Free text still allowed.
+  const LANGUAGES = ["Afrikaans","Albanian","Amharic","Arabic","Armenian","Azerbaijani","Basque","Belarusian","Bengali","Bosnian","Bulgarian","Burmese","Cantonese","Catalan","Cebuano","Chinese (Mandarin)","Croatian","Czech","Danish","Dutch","English","Estonian","Filipino (Tagalog)","Finnish","French","Galician","Georgian","German","Greek","Gujarati","Hausa","Hebrew","Hindi","Hungarian","Icelandic","Igbo","Indonesian","Irish","Italian","Japanese","Javanese","Kannada","Kazakh","Khmer","Korean","Kurdish","Lao","Latin","Latvian","Lithuanian","Luxembourgish","Macedonian","Malay","Malayalam","Maltese","Maori","Marathi","Mongolian","Nepali","Norwegian","Pashto","Persian (Farsi)","Polish","Portuguese","Punjabi","Romanian","Russian","Scottish Gaelic","Serbian","Sinhala","Slovak","Slovenian","Somali","Spanish","Swahili","Swedish","Tamil","Telugu","Thai","Turkish","Ukrainian","Urdu","Uzbek","Vietnamese","Welsh","Xhosa","Yiddish","Yoruba","Zulu"];
+  const langDatalist = '<datalist id="language-list">' + LANGUAGES.map(l => '<option value="' + l + '"></option>').join('') + '</datalist>';
+
+  const languageForm = {
+    type: jsPsychSurveyHtmlForm,
+    preamble: function(){
+      return `<div class="q-wrap"><div class="doc-title">Language ${langIndex + 1}</div>
+        <p>Please answer about <b>one</b> additional language${langIndex > 0 ? " (a different one)" : ""}.</p></div>`;
+    },
+    html: `<div class="q-wrap">
+      <div class="q-block">
+        <label class="q-label">7. Which language is this?
+          <span class="q-hint">(start typing and pick from the list)</span></label>
+        <input type="text" name="lang_name" list="language-list" autocomplete="off" placeholder=" " required>
+        ${langDatalist}
+      </div>
+      <div class="q-block">
+        <label class="q-label">8. How old were you when you started learning it?
+          <span class="q-hint">(age in years)</span></label>
+        <input type="text" name="lang_age_start" inputmode="numeric" pattern="0|[1-9][0-9]?" placeholder=" "
+          title="Enter a whole number of years, with no leading zero (e.g. 8, not 08)" required>
+        <span class="err-hint">Please enter a whole number of years (e.g. 8), with no leading zero.</span>
+      </div>
+      <div class="q-block">
+        <label class="q-label">9. How did you learn this language?
+          <span class="q-hint">(select all that apply)</span></label>
+        <label class="opt"><input type="checkbox" name="learn_home" value="1"> At home with family</label>
+        <label class="opt"><input type="checkbox" name="learn_school" value="1"> At school or in classes</label>
+        <label class="opt"><input type="checkbox" name="learn_screen" value="1"> Through screen media (TV, films, games, apps)</label>
+        <label class="opt"><input type="checkbox" name="learn_online" value="1"> Through online interaction</label>
+        <label class="opt"><input type="checkbox" name="learn_living" value="1"> Through living where it is spoken</label>
+        <label class="opt"><input type="checkbox" name="learn_other" value="1"> Other</label>
+        <div class="other-text"><input type="text" name="learn_other_text" placeholder="If other, please specify"></div>
+      </div>
+      <div class="q-block">
+        <label class="q-label">10. Thinking about your <b>early</b> exposure, was it more through people or through screens?</label>
+        <div class="scale5">
+          <label class="pt"><input type="radio" name="screen_interaction" value="1" required><span class="num">1</span><span class="cap">Almost entirely through interaction with people</span></label>
+          <label class="pt"><input type="radio" name="screen_interaction" value="2"><span class="num">2</span><span class="cap">Mostly through interaction with people</span></label>
+          <label class="pt"><input type="radio" name="screen_interaction" value="3"><span class="num">3</span><span class="cap">About equally interaction and screens</span></label>
+          <label class="pt"><input type="radio" name="screen_interaction" value="4"><span class="num">4</span><span class="cap">Mostly through screens</span></label>
+          <label class="pt"><input type="radio" name="screen_interaction" value="5"><span class="num">5</span><span class="cap">Almost entirely through screens</span></label>
+        </div>
+      </div>
+      <div class="q-block">
+        <label class="q-label">11. Is this language used at home?</label>
+        <label class="opt"><input type="radio" name="home_use" value="regularly" required> Yes, regularly</label>
+        <label class="opt"><input type="radio" name="home_use" value="occasionally"> Yes, occasionally</label>
+        <label class="opt"><input type="radio" name="home_use" value="no"> No</label>
+      </div>
+      <div class="q-block">
+        <label class="q-label">12. Was this language taught at school, or used as the language of instruction?
+          <span class="q-hint">(answer Yes if either is true)</span></label>
+        <label class="opt"><input type="radio" name="school_taught" value="yes" required> Yes</label>
+        <label class="opt"><input type="radio" name="school_taught" value="no"> No</label>
+      </div>
+      <div class="q-block">
+        <label class="q-label">13. While you were growing up (roughly up to age 18), for about how many years did you regularly use or hear this language?
+          <span class="q-hint">(your best estimate, in whole years)</span></label>
+        <input type="text" name="lang_years" inputmode="numeric" pattern="0|[1-9][0-9]?" placeholder=" "
+          title="Enter a whole number of years, with no leading zero (e.g. 6, not 06)" required>
+        <span class="err-hint">Please enter a whole number of years (e.g. 6), with no leading zero.</span>
+      </div>
+      <div class="q-block" style="border-bottom:none; background:#f6f8fc; padding:12px; border-radius:8px;">
+        <label class="q-label">Do you have ANOTHER additional language to tell us about?</label>
+        <label class="opt"><input type="radio" name="add_another" value="yes" required> Yes, add another language</label>
+        <label class="opt"><input type="radio" name="add_another" value="no"> No, that's all</label>
+      </div>
+    </div>`,
+    button_label: "Continue",
+    data: { screen: "language_history" },
+    on_finish: function(data){
+      langIndex++;
+      data.language_index = langIndex;
+    }
+  };
+  const languageLoop = {
+    timeline: [languageForm],
+    loop_function: function(){
+      const last = jsPsych.data.get().filter({screen:'language_history'}).last(1).values()[0];
+      return (last.response.add_another === 'yes') && (langIndex < MAX_LANGS);
+    }
+  };
+  timeline.push({
+    timeline: [languageLoop],
+    conditional_function: function(){
+      const last = jsPsych.data.get().filter({screen:'lang_gate'}).last(1).values()[0];
+      return last.response.lang_any === 'yes';
+    }
+  });
+
+
+  // ---- SECTION C: NAD task — both modalities, order counterbalanced per participant ----
+  const verbalFirst = jsPsych.randomization.sampleWithoutReplacement([true,false],1)[0];
+  jsPsych.data.addProperties({ task_order: verbalFirst ? 'verbal_first' : 'nonverbal_first' });
+
+  const firstTask  = verbalFirst ? buildVerbalTask(jsPsych, false)  : buildNonverbalTask(jsPsych, false);
+  const secondTask = verbalFirst ? buildNonverbalTask(jsPsych, true) : buildVerbalTask(jsPsych, true);
+
+  firstTask.forEach(function(node){ timeline.push(node); });
+
+  // between-task transition / rest (the next task uses different sounds but works the same way)
+  timeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<div class="task-card"><div class="welcome-title">Halfway there</div>
+      <p>You've finished the first listening game — nice work. Take a short break whenever you need it.</p>
+      <p>The next game works the <b>same way</b>, but uses a <b>different set of sounds</b>. We'll remind you of the rules and show you the new target before you start.</p></div>`,
+    choices: ["I'm ready for the next part"]
+  });
+
+  secondTask.forEach(function(node){ timeline.push(node); });
+
+  // ---- SECTION D: Post-task awareness assessment (Dienes & Scott, 2005) ----
+  // Asked once, after BOTH tasks. Implicit vs explicit status is inferred from the relation
+  // between these reports and actual performance, not from self-labelling alone.
+  timeline.push({
+    type: jsPsychSurveyHtmlForm,
+    preamble: `<div class="q-wrap"><div class="doc-title">A few final questions</div>
+      <p>Now that both listening games are over, we'd like to know how they felt to you.
+      There are no right or wrong answers — please just say what matches your experience.</p></div>`,
+    html: `<div class="q-wrap">
+      <div class="q-block notice-block">
+        <label class="q-label">14. While listening, did you notice any pattern or rule in how the clips were put together?</label>
+        <label class="opt"><input type="radio" name="aware_noticed" value="yes" required> Yes</label>
+        <label class="opt"><input type="radio" name="aware_noticed" value="no"> No</label>
+        <label class="opt"><input type="radio" name="aware_noticed" value="not_sure"> Not sure</label>
+        <div class="cond-detail">15. If yes, what was the pattern? Describe it in a sentence or two, in your own words:<br>
+          <textarea name="aware_rule_desc" rows="3" style="width:100%; margin-top:6px;"></textarea></div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">16. What did you focus on while listening?</label>
+        <label class="opt"><input type="radio" name="aware_focus" value="first" required> The first sound</label>
+        <label class="opt"><input type="radio" name="aware_focus" value="last"> The last sound</label>
+        <label class="opt"><input type="radio" name="aware_focus" value="whole"> The whole sequence</label>
+        <label class="opt"><input type="radio" name="aware_focus" value="middle"> The middle sounds</label>
+        <label class="opt"><input type="radio" name="aware_focus" value="nothing"> Nothing in particular</label>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">17. How confident are you that there really was a rule?</label>
+        <div class="scale5">
+          <label class="pt"><input type="radio" name="aware_confidence" value="1" required><span class="num">1</span><span class="cap">Just guessing</span></label>
+          <label class="pt"><input type="radio" name="aware_confidence" value="2"><span class="num">2</span><span class="cap">A little confident</span></label>
+          <label class="pt"><input type="radio" name="aware_confidence" value="3"><span class="num">3</span><span class="cap">Moderately confident</span></label>
+          <label class="pt"><input type="radio" name="aware_confidence" value="4"><span class="num">4</span><span class="cap">Quite confident</span></label>
+          <label class="pt"><input type="radio" name="aware_confidence" value="5"><span class="num">5</span><span class="cap">Very confident</span></label>
+        </div>
+      </div>
+
+      <div class="q-block">
+        <label class="q-label">18. Your sense of the pattern was based mostly on…</label>
+        <label class="opt"><input type="radio" name="aware_source" value="guess" required> A pure guess</label>
+        <label class="opt"><input type="radio" name="aware_source" value="intuition"> A feeling or intuition you can't explain</label>
+        <label class="opt"><input type="radio" name="aware_source" value="memory"> The memory of particular sounds</label>
+        <label class="opt"><input type="radio" name="aware_source" value="rule"> A rule you could state</label>
+      </div>
+
+      <div class="q-block" style="border-bottom:none;">
+        <label class="q-label">19. Which game felt easier?</label>
+        <label class="opt"><input type="radio" name="aware_easier" value="words" required> The word game (made-up spoken sounds)</label>
+        <label class="opt"><input type="radio" name="aware_easier" value="tones"> The tone game (musical sounds)</label>
+        <label class="opt"><input type="radio" name="aware_easier" value="same"> About the same</label>
+        <label class="opt"><input type="radio" name="aware_easier" value="not_sure"> Not sure</label>
+      </div>
+    </div>`,
+    button_label: "Continue",
+    data: { screen: "awareness" }
+  });
+
+  // ---- Placeholder: debrief + Prolific completion come next ----
+  timeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<div class="welcome-title">Thank you — that's the end of the tasks</div>
+      <p>Your responses have been recorded.</p>
+      <p class="subtle">(Test build — the debrief screen and the return-to-Prolific step still need to be added.)</p>`,
+    choices: ["Finish"]
+  });
+  if (ON_PAVLOVIA) {
+    timeline.push({ type: jsPsychPavlovia, command: "finish" });
+  } else {
+    // Local / preview test mode: show a small banner so it's clear data won't be saved to the server.
+    var banner = document.createElement('div');
+    banner.textContent = "TEST MODE — not on run.pavlovia.org. Pavlovia is skipped; your responses are shown on screen at the end but NOT saved to the server.";
+    banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:#fff3cd;color:#664d03;border-bottom:1px solid #e0c97f;padding:7px 12px;font:13px sans-serif;text-align:center;z-index:9999;";
+    document.body.appendChild(banner);
+  }
+  jsPsych.run(timeline);
+}
+</script>
+</html>
