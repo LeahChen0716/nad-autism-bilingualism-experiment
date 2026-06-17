@@ -53,7 +53,7 @@ The experiment is a single self-contained `index.html` plus the two audio folder
 
 ## The NAD task
 
-- **Trial:** a three-element A–X–B sequence. The participant responds to whether the clip ends with the target, key F if it does, J otherwise.
+- **Trial:** a three-element A–X–B sequence. The participant responds to whether the clip ends with the target, key A if it does, L otherwise.
 - **Dependency:** during training, A predicts B across a variable middle element X. Per task: 2 A, 2 B, 24 X, 4 filler.
 - **Instructions are deliberately neutral** :participants are told only the response rule (respond to whether the clip ends with the target). They are not told to ignore the first element, and not told to look for a rule.
 - **Reaction time** is measured from the onset of the third element and may be negative (anticipation); a custom WebAudio-scheduled plugin handles the timing.
@@ -66,7 +66,7 @@ The experiment is a single self-contained `index.html` plus the two audio folder
 
 ### Current parameters
 
-All in one `CFG` block at the top of the task builder in `index.html`. Values follow **Dumont et al. (2025)**:
+All in one `CFG` block at the top of the task builder in `index.html`:
 
 | Parameter | Value |
 |---|---|
@@ -75,7 +75,7 @@ All in one `CFG` block at the top of the task builder in `index.html`. Values fo
 | Inter-element interval | 1000 ms |
 | Response window | 750 ms |
 | Practice trials | 8 (with feedback) |
-| Response keys | F (target) / J (other) |
+| Response keys | A (target) / L (other) |
 
 ---
 
