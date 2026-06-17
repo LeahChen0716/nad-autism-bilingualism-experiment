@@ -83,10 +83,6 @@
     .nad-orb.pulse { animation: nadpulse .45s ease-out; }
     @keyframes nadpulse { 0%{ transform:scale(1); box-shadow:0 0 0 0 rgba(31,58,95,.35);} 50%{ transform:scale(1.14);} 100%{ transform:scale(1); box-shadow:0 0 0 28px rgba(31,58,95,0);} }
     .nad-keys { display:flex; gap:48px; }
-    .nad-key { min-width:160px; padding:16px 20px; border:2px solid #cdd6e4; border-radius:14px; text-align:center; background:#fff; transition:background .1s, border-color .1s; }
-    .nad-key .kcap { font-size:30px; font-weight:700; color:#1f3a5f; }
-    .nad-key .klab { font-size:15px; color:#555; margin-top:4px; }
-    #nad-key-target { border-color:#9fc6a6; }
     .nad-key.chosen { background:#eef3fa; border-color:#1f3a5f; }
     .nad-hint { color:#888; font-size:15px; }
     .nad-fb { font-size:52px; font-weight:800; line-height:1; }
@@ -101,6 +97,11 @@
     .task-card .demo-tag { min-width:90px; font-weight:600; font-size:18px; }
     .task-card audio { height:38px; }
     .nad-hint { color:#888; font-size:17px; }
+    .nad-keycap { color:#555; font-size:15px; margin-bottom:10px; letter-spacing:.02em; }
+    /* inline 3D keyboard keycap, used in instructions and on the trial screen */
+    .kbd { display:inline-block; min-width:1.4em; padding:1px 8px; margin:0 2px; font-weight:700; font-size:0.95em; color:#1f3a5f; background:linear-gradient(#ffffff,#e8edf3); border:1px solid #b6c0cf; border-bottom-width:3px; border-radius:6px; line-height:1.5; vertical-align:baseline; }
+    .kbd.big { font-size:1.15em; padding:3px 12px; }
+    .kbd.pressed { background:linear-gradient(#e8edf3,#d8e0ea); border-bottom-width:1px; transform:translateY(2px); }
   </style>
 </head>
 <body>
@@ -399,11 +400,7 @@ var jsPsychPavlovia = (function (jsPsych)
       display_element.innerHTML = `
         <div class="nad-stage">
           <div class="nad-orb" id="nad-orb"><div class="nad-orb-core"></div></div>
-          <div class="nad-keys">
-            <div class="nad-key" id="nad-key-target"><div class="kcap">${String(trial.target_key).toUpperCase()}</div><div class="klab">TARGET sound</div></div>
-            <div class="nad-key" id="nad-key-other"><div class="kcap">${String(trial.nontarget_key).toUpperCase()}</div><div class="klab">any other</div></div>
-          </div>
-          <div class="nad-hint">When a clip ends with the target, press ${String(trial.target_key).toUpperCase()}; otherwise press ${String(trial.nontarget_key).toUpperCase()}.</div>
+          <div class="nad-hint" style="font-size:19px; color:#444; line-height:2;">When a clip ends with the target, press <span class="kbd big" id="kbd-target">${String(trial.target_key).toUpperCase()}</span>.<br>Otherwise, press <span class="kbd big" id="kbd-other">${String(trial.nontarget_key).toUpperCase()}</span>.</div>
         </div>`;
       const orb = display_element.querySelector('#nad-orb');
       const ctx = jsPsych.pluginAPI.audioContext();
@@ -443,8 +440,8 @@ var jsPsychPavlovia = (function (jsPsych)
         response_key=k;
         rt=(bOnsetPerf!=null)?(pressPerf-bOnsetPerf):null;
         correct = trial.is_target ? (k===targetKey) : (k===nonTargetKey);
-        const el = (k===targetKey)? display_element.querySelector('#nad-key-target') : display_element.querySelector('#nad-key-other');
-        if(el) el.classList.add('chosen');
+        const el = (k===targetKey)? display_element.querySelector('#kbd-target') : display_element.querySelector('#kbd-other');
+        if(el) el.classList.add('pressed');
       };
       document.addEventListener('keydown', onKey);
       cleanup.push(()=>document.removeEventListener('keydown', onKey));
@@ -486,7 +483,7 @@ var jsPsychPavlovia = (function (jsPsych)
     name:'nad-trial',
     parameters:{
       audioA:{type:PT.STRING,default:undefined}, audioX:{type:PT.STRING,default:undefined}, audioB:{type:PT.STRING,default:undefined},
-      target_key:{type:PT.STRING,default:'f'}, nontarget_key:{type:PT.STRING,default:'j'},
+      target_key:{type:PT.STRING,default:'a'}, nontarget_key:{type:PT.STRING,default:'l'},
       is_target:{type:PT.BOOL,default:false},
       inter_element_ms:{type:PT.INT,default:1000}, response_window_ms:{type:PT.INT,default:750},
       feedback:{type:PT.BOOL,default:false},
@@ -513,7 +510,7 @@ function buildNadTask(jsPsych, opts){
     interElementMs:1000,
     responseWindowMs:750,    // Dumont et al. (2025)
     practiceTrials:8,
-    targetKey:'f', nonTargetKey:'j',
+    targetKey:'a', nonTargetKey:'l',
     itiMs:400,
     breakEvery:2     // short break after every N training blocks
   };
@@ -555,6 +552,9 @@ function buildNadTask(jsPsych, opts){
 
   const btn=(stim,label)=>({ type:jsPsychHtmlButtonResponse, stimulus:stim, choices:[label||'Continue'] });
   const targetFile=DIR+B[targetBIdx].file, otherFile=DIR+B[nonTargetBIdx].file;
+  // inline 3D keycaps for the instructions (keeps A/L looking like keyboard keys, not buttons)
+  const KT=`<span class="kbd">${CFG.targetKey.toUpperCase()}</span>`;
+  const KN=`<span class="kbd">${CFG.nonTargetKey.toUpperCase()}</span>`;
 
   // Block intro WITH an acoustic target reminder (same on every block; training, disruption,
   // recovery; so it is a constant, not a confound). Acoustic only (not spelled out) and the
@@ -562,10 +562,8 @@ function buildNadTask(jsPsych, opts){
   function blockIntro(n){
     return { type:jsPsychHtmlButtonResponse, stimulus:`<div class="task-card">
       <div class="welcome-title">Block ${n}</div>
-      <p>Quick reminder of the target ${opts.oneNoun}. Press
-         <b>${CFG.targetKey.toUpperCase()}</b> when a clip ends with the <b style="color:#2f7d3a;">TARGET</b> below, and
-         <b>${CFG.nonTargetKey.toUpperCase()}</b> when it ends with anything else. Have a listen, then begin.</p>
-      <div class="demo-row"><span class="demo-tag" style="color:#2f7d3a;">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
+      <p>Quick reminder of the target ${opts.oneNoun}. Press ${KT} when a clip ends with the <b>TARGET</b> below, and ${KN} when it ends with anything else. Have a listen, then begin.</p>
+      <div class="demo-row"><span class="demo-tag">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
     </div>`, choices:['Start block'] };
   }
 
@@ -578,36 +576,36 @@ function buildNadTask(jsPsych, opts){
       <div class="welcome-title">Second game (same idea, new ${opts.oneNoun}s)</div>
       <p>This game works <b>just like the last one</b>. You'll hear short clips, and you only need to listen to the <b>very last ${opts.oneNoun}</b> of each clip:</p>
       <ul class="rules">
-        <li><b class="k">${CFG.targetKey.toUpperCase()}</b> the last ${opts.oneNoun} is the <b style="color:#2f7d3a;">TARGET</b></li>
-        <li><b class="k">${CFG.nonTargetKey.toUpperCase()}</b> the last ${opts.oneNoun} is <b>anything else</b></li>
+        <li>${KT} the last ${opts.oneNoun} is the <b>TARGET</b></li>
+        <li>${KN} the last ${opts.oneNoun} is <b>anything else</b></li>
       </ul>
       <p>This time the clips are made of <b>${opts.manyNoun}</b>, so there is a <b>new target</b> to learn. You'll hear it on the next screen and can practise first.</p>
     </div>`, 'Next'));
   } else {
     tl.push(btn(`<div class="task-card">
       <div class="welcome-title">A listening game</div>
-      <p>In this game you'll hear lots of short clips. Each clip is <b>three ${opts.manyNoun}</b> in a row, played quickly one after another.</p>
-      <p>One particular ${opts.oneNoun} is the <b style="color:#2f7d3a;">TARGET</b>. On each clip, you decide whether it <b>ends</b> with the target:</p>
+      <p>In this game you'll hear lots of short clips. Each clip is <b>three ${opts.manyNoun}</b> in a row, played quickly.</p>
+      <p>One particular ${opts.oneNoun} is the <b>TARGET</b>. On each clip, you decide whether it <b>ends</b> with the target:</p>
       <ul class="rules">
-        <li><b class="k">${CFG.targetKey.toUpperCase()}</b> press ${CFG.targetKey.toUpperCase()} if the clip's <b>last</b> ${opts.oneNoun} is the <b style="color:#2f7d3a;">TARGET</b></li>
-        <li><b class="k">${CFG.nonTargetKey.toUpperCase()}</b> press ${CFG.nonTargetKey.toUpperCase()} if it ends with <b>any other</b> ${opts.oneNoun}</li>
+        <li>${KT} the clip <b>ends</b> with the <b>TARGET</b></li>
+        <li>${KN} it ends with <b>any other</b> ${opts.oneNoun}</li>
       </ul>
-      <p>You'll hear the target ${opts.oneNoun} on the next screen, and you can practise before the real game starts. Rest one finger on <b>${CFG.targetKey.toUpperCase()}</b> and one on <b>${CFG.nonTargetKey.toUpperCase()}</b>, listen to each clip, and answer <b>as quickly and accurately as you can</b>.</p>
+      <p>You'll respond with two keys on your keyboard (${KT} and ${KN}), so please take part on a <b>computer</b>. You'll hear the target ${opts.oneNoun} next and can practise first.</p>
     </div>`, 'Next'));
   }
 
   tl.push(btn(`<div class="task-card">
     <div class="welcome-title">This is the target ${opts.oneNoun}</div>
-    <p>Have a listen a few times so you can recognise it. From now on, press <b>${CFG.targetKey.toUpperCase()}</b> whenever a clip <b>ends with this ${opts.oneNoun}</b>.</p>
-    <div class="demo-row"><span class="demo-tag" style="color:#2f7d3a;">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
-    <p style="margin-top:18px;">Here is a <b>different</b> ${opts.oneNoun}. When a clip ends with anything that is <b>not</b> the target, press <b>${CFG.nonTargetKey.toUpperCase()}</b>:</p>
+    <p>Have a listen a few times so you can recognise it. From now on, press ${KT} whenever a clip <b>ends with this ${opts.oneNoun}</b>.</p>
+    <div class="demo-row"><span class="demo-tag">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
+    <p style="margin-top:18px;">Here is a <b>different</b> ${opts.oneNoun}. When a clip ends with anything that is <b>not</b> the target, press ${KN}:</p>
     <div class="demo-row"><span class="demo-tag">other (${CFG.nonTargetKey.toUpperCase()}):</span><audio controls preload="auto" src="${otherFile}"></audio></div>
   </div>`, "I've learned the target; let's practise"));
 
   // practice (with feedback)
   tl.push(btn(`<div class="task-card"><div class="welcome-title">Practice</div>
     <p>Let's try a few clips. You'll get feedback (✓ / ✗) so you can get used to it.</p>
-    <p>Keep your fingers on <b>${CFG.targetKey.toUpperCase()}</b> and <b>${CFG.nonTargetKey.toUpperCase()}</b>.</p></div>`, 'Start practice'));
+    <p>Keep your fingers on ${KT} and ${KN}.</p></div>`, 'Start practice'));
   // build a short practice set (intact)
   const practiceSet=[]; const tgt=B[targetBIdx], ntg=B[nonTargetBIdx];
   for(let i=0;i<CFG.practiceTrials;i++){
@@ -617,8 +615,9 @@ function buildNadTask(jsPsych, opts){
   tl.push({ timeline: jsPsych.randomization.shuffle(practiceSet) });
 
   tl.push(btn(`<div class="task-card"><div class="welcome-title">Ready</div>
-    <p>Great; the real game starts now. There is <b>no</b> feedback from here on. Listen to each clip and press <b>${CFG.targetKey.toUpperCase()}</b> if it ends with the target, <b>${CFG.nonTargetKey.toUpperCase()}</b> if not; as quickly and accurately as you can.</p>
-    <p>It runs in several short blocks with breaks in between.</p></div>`, 'Begin'));
+    <p>The real game starts now; from here on there is <b>no</b> feedback.</p>
+    <p>On your keyboard, press ${KT} if a clip ends with the target, ${KN} if not, as fast and accurately as you can.</p>
+    <p>It runs in several short blocks, with breaks in between.</p></div>`, 'Begin'));
 
   // 6 training blocks (+ breaks), 1 disruption, 1 recovery; block intros are generic (no hint of disruption)
   let bi=0;
@@ -726,7 +725,7 @@ function runExperiment() {
     stimulus: `
       <div class="doc-wrap">
         <div class="doc-title">Participant Information Sheet</div>
-        <div class="doc-subtitle">An online study of sound-pattern learning</div>
+        <div class="doc-subtitle">An online study of listening to sounds and words</div>
         <div class="scroll-box">
           <p class="doc-meta"><b>UCL Research Ethics Committee Approval ID:</b> 4620</p>
           <p class="doc-meta"><i>You may save or print a copy of this information sheet for your records.</i></p>
@@ -739,7 +738,7 @@ function runExperiment() {
           <p>You are being invited to take part in a research project. Before you decide, it is important for you to understand why the research is being done and what taking part will involve. Please read the following information carefully and ask us if anything is unclear or if you would like more information. Take your time to decide whether you wish to take part. Thank you for reading this.</p>
 
           <h3>What is the project's purpose?</h3>
-          <p>This project studies how adults learn patterns in sequences of sounds. People are very good at picking up regularities in what they hear, for example, in language. We are interested in how adults learn a particular kind of pattern (where an earlier sound predicts a later one), both in spoken nonsense words and in musical tones, and how this relates to people's language background and to autism. The study is being carried out as part of a Master's dissertation. Taking part involves a single online session of approximately 35 minutes.</p>
+          <p>This project studies how adults listen and respond to sequences of sounds. People are very good at picking up on what they hear, for example in language. We are interested in how adults respond to sounds, both spoken nonsense words and musical tones, and how this relates to people's language background and to autism. The study is being carried out as part of a Master's dissertation. Taking part involves a single online session of approximately 35 minutes.</p>
 
           <h3>Why have I been chosen?</h3>
           <p>You have been invited because you are an adult aged 18&ndash;65, are a fluent English speaker, and have signed up to take part in research through the Prolific platform. We are recruiting people both with and without a diagnosis of autism, and with a range of language backgrounds. We aim to recruit around 200 participants in total. To take part you should have normal or corrected-to-normal hearing and be able to use headphones.</p>
@@ -748,7 +747,7 @@ function runExperiment() {
           <p>It is up to you to decide whether or not to take part. If you do decide to take part you will be able to keep this information sheet and will be asked to agree to a consent form before starting. You can withdraw at any time, without giving a reason and without any penalty, simply by closing your browser. If you withdraw during the study, any partial data will be deleted. After completing the study, you can ask us to remove your data by quoting your Prolific ID, up to two weeks after completion, after which the data will have been anonymised and aggregated and can no longer be identified or removed.</p>
 
           <h3>What will happen to me if I take part?</h3>
-          <p>The study takes place entirely online, in your web browser, in a single session of approximately 35 minutes. You will: (1) read this information and give consent; (2) complete a short sound/headphone check; (3) answer some questionnaires about your background and language history, and a short standardized questionnaire about social and everyday preferences (the Autism-Spectrum Quotient), which is completed by everyone taking part; (4) complete two listening tasks, one using spoken nonsense words and one using musical tones, in which you listen to sequences and press a key in response; (5) answer a few short questions about your experience of the tasks. There are no right or wrong answers in the questionnaires. You will be reimbursed for your time through Prolific (&pound;5).</p>
+          <p>The study takes place entirely online, in your web browser <b>on a computer (laptop or desktop, not a phone or tablet)</b>, in a single session of approximately 35 minutes. You will: (1) read this information and give consent; (2) complete a short sound/headphone check; (3) answer some questionnaires about your background and language history, and a short standardized questionnaire about social and everyday preferences (the Autism-Spectrum Quotient), which is completed by everyone taking part; (4) complete two listening tasks, one using spoken nonsense words and one using musical tones, in which you listen to sequences and press a key in response; (5) answer a few short questions about your experience of the tasks. There are no right or wrong answers in the questionnaires. You will be reimbursed for your time through Prolific (&pound;5).</p>
 
           <h3>Will I be recorded?</h3>
           <p>No audio or video recordings of you are made. The study only records your responses (key presses and answers) within the online task.</p>
@@ -757,7 +756,7 @@ function runExperiment() {
           <p>The risks are minimal. The tasks involve only listening and pressing keys and answering questionnaires. You may find the listening task a little repetitive, and some questions ask about your autism diagnosis (if any) and language background; you may skip questions you prefer not to answer and may stop at any time. To allow the tasks to work as intended, the listening behavior we are studying is not described in full before you begin; it will be explained to you at the end of the study.</p>
 
           <h3>What are the possible benefits of taking part?</h3>
-          <p>You will gain &pound;5 as reimbursement for your time. It is hoped that the research will improve understanding of how adults (including autistic adults) learn patterns in sound and language, which may inform future research and support.</p>
+          <p>You will gain &pound;5 as reimbursement for your time. It is hoped that the research will improve understanding of how adults, including autistic adults, listen to and process sounds and language, which may inform future research and support.</p>
 
           <h3>What if something goes wrong?</h3>
           <p>If you have a concern or complaint about any aspect of the study, please contact the researcher or the supervisor (details above) in the first instance. If you feel your complaint has not been handled to your satisfaction, you can contact the Chair of the UCL Research Ethics Committee at ethics@ucl.ac.uk.</p>
@@ -796,7 +795,7 @@ function runExperiment() {
     stimulus: `
       <div class="doc-wrap">
         <div class="doc-title">Consent Form for Adult Participants</div>
-        <div class="doc-subtitle">An online study of sound-pattern learning</div>
+        <div class="doc-subtitle">An online study of listening to sounds and words</div>
         <p class="doc-meta"><b>Title of Study:</b> Modality Specificity of Non-Adjacent Dependency Learning in Autistic Adults with a History of Unexpected Bilingualism</p>
         <p class="doc-meta"><b>Approved by the UCL Research Ethics Committee &mdash; Project ID:</b> 4620</p>
         <p class="doc-meta">Please read this form after you have read the Information Sheet. If you have any questions, please contact the researcher before you decide whether to take part.</p>
