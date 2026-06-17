@@ -1195,7 +1195,15 @@ function runExperiment() {
     data: { screen: "debrief" }
   });
   if (ON_PAVLOVIA) {
-    timeline.push({ type: jsPsychPavlovia, command: "finish" });
+    // Save data to Pavlovia, then redirect the participant back to Prolific to register completion.
+    timeline.push({
+      type: jsPsychPavlovia,
+      command: "finish",
+      participantId: prolificID,
+      on_finish: function(){
+        window.location = "https://app.prolific.com/submissions/complete?cc=CWL6BUR9";
+      }
+    });
   } else {
     // Local / preview test mode: show a small banner so it's clear data won't be saved to the server.
     var banner = document.createElement('div');
