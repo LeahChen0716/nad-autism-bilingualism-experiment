@@ -380,7 +380,7 @@ var jsPsychPavlovia = (function (jsPsych)
 
 <script>
 /* ============================================================
-   Custom plugin: NAD A–X–B target-detection trial (verbal & non-verbal)
+   Custom plugin: NAD A-X-B target-detection trial (verbal & non-verbal)
    - plays three audio elements with a fixed inter-element gap (WebAudio = accurate)
    - two-choice key response; anticipatory responses allowed
    - RT measured from the ONSET of the 3rd element (can be negative)
@@ -499,14 +499,14 @@ var jsPsychPavlovia = (function (jsPsych)
 
 /* ============================================================
    Verbal NAD task builder. Returns an array of timeline nodes.
-   All counts/timing are in CFG below — adjust there (Dumont 2025 defaults).
+   All counts/timing are in CFG below; adjust there (Dumont 2025 defaults).
    ============================================================ */
 function buildNadTask(jsPsych, opts){
   const DIR=opts.DIR;
   const A=opts.A, B=opts.B, F=opts.F, X=opts.X;
   const allFiles=[].concat(A,B,F,X).map(o=>DIR+o.file);
 
-  // ---------- CONFIG (Dumont et al. 2025 defaults — confirm before main run) ----------
+  // ---------- CONFIG (Dumont et al. 2025 defaults; confirm before main run) ----------
   const CFG={
     nTraining:6,   // Dumont et al. (2025)
     perBlock:{target:12, nonTarget:12, filler:6},   // 30 trials/block
@@ -556,8 +556,8 @@ function buildNadTask(jsPsych, opts){
   const btn=(stim,label)=>({ type:jsPsychHtmlButtonResponse, stimulus:stim, choices:[label||'Continue'] });
   const targetFile=DIR+B[targetBIdx].file, otherFile=DIR+B[nonTargetBIdx].file;
 
-  // Block intro WITH an acoustic target reminder (same on every block — training, disruption,
-  // recovery — so it is a constant, not a confound). Acoustic only (not spelled out) and the
+  // Block intro WITH an acoustic target reminder (same on every block; training, disruption,
+  // recovery; so it is a constant, not a confound). Acoustic only (not spelled out) and the
   // target B is played in isolation, so it does not reveal the A→B dependency.
   function blockIntro(n){
     return { type:jsPsychHtmlButtonResponse, stimulus:`<div class="task-card">
@@ -570,12 +570,12 @@ function buildNadTask(jsPsych, opts){
   }
 
   const tl=[];
-  // (audio is preloaded once up front, before the questionnaires — see runExperiment)
+  // (audio is preloaded once up front, before the questionnaires; see runExperiment)
 
   // instructions + target demo  (second task gets a short "same game, new sounds" recap)
   if (opts.isSecond){
     tl.push(btn(`<div class="task-card">
-      <div class="welcome-title">Second game — same idea, new ${opts.oneNoun}s</div>
+      <div class="welcome-title">Second game (same idea, new ${opts.oneNoun}s)</div>
       <p>This game works <b>just like the last one</b>. You'll hear short clips, and you only need to listen to the <b>very last ${opts.oneNoun}</b> of each clip:</p>
       <ul class="rules">
         <li><b class="k">${CFG.targetKey.toUpperCase()}</b> the last ${opts.oneNoun} is the <b style="color:#2f7d3a;">TARGET</b></li>
@@ -602,7 +602,7 @@ function buildNadTask(jsPsych, opts){
     <div class="demo-row"><span class="demo-tag" style="color:#2f7d3a;">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
     <p style="margin-top:18px;">Here is a <b>different</b> ${opts.oneNoun}. When a clip ends with anything that is <b>not</b> the target, press <b>${CFG.nonTargetKey.toUpperCase()}</b>:</p>
     <div class="demo-row"><span class="demo-tag">other (${CFG.nonTargetKey.toUpperCase()}):</span><audio controls preload="auto" src="${otherFile}"></audio></div>
-  </div>`, "I've learned the target — let's practise"));
+  </div>`, "I've learned the target; let's practise"));
 
   // practice (with feedback)
   tl.push(btn(`<div class="task-card"><div class="welcome-title">Practice</div>
@@ -617,10 +617,10 @@ function buildNadTask(jsPsych, opts){
   tl.push({ timeline: jsPsych.randomization.shuffle(practiceSet) });
 
   tl.push(btn(`<div class="task-card"><div class="welcome-title">Ready</div>
-    <p>Great — the real game starts now. There is <b>no</b> feedback from here on. Listen to each clip and press <b>${CFG.targetKey.toUpperCase()}</b> if it ends with the target, <b>${CFG.nonTargetKey.toUpperCase()}</b> if not — as quickly and accurately as you can.</p>
+    <p>Great; the real game starts now. There is <b>no</b> feedback from here on. Listen to each clip and press <b>${CFG.targetKey.toUpperCase()}</b> if it ends with the target, <b>${CFG.nonTargetKey.toUpperCase()}</b> if not; as quickly and accurately as you can.</p>
     <p>It runs in several short blocks with breaks in between.</p></div>`, 'Begin'));
 
-  // 6 training blocks (+ breaks), 1 disruption, 1 recovery — block intros are generic (no hint of disruption)
+  // 6 training blocks (+ breaks), 1 disruption, 1 recovery; block intros are generic (no hint of disruption)
   let bi=0;
   for(let b=1;b<=CFG.nTraining;b++){
     bi++;
@@ -641,7 +641,7 @@ function buildNadTask(jsPsych, opts){
   tl.push({ timeline: makeTrials('intact','recovery',bi,false) });
 
   tl.push(btn(`<div class="task-card"><div class="welcome-title">End of the listening game</div>
-    <p>Well done — that part is complete. Thank you!</p></div>`, 'Continue'));
+    <p>Well done; that part is complete. Thank you!</p></div>`, 'Continue'));
 
   return tl;
 }
@@ -668,7 +668,7 @@ function buildNonverbalTask(jsPsych, isSecond){
   return buildNadTask(jsPsych, { task:'nonverbal', DIR, A, B, F, X, oneNoun:'sound', manyNoun:'instrument sounds', isSecond:!!isSecond });
 }
 
-/* All audio files for both tasks — used for a single up-front preload so there is no
+/* All audio files for both tasks; used for a single up-front preload so there is no
    loading screen right before each task (smoother, and no flash on cached loads). */
 function allNadAudioFiles(){
   const v=['A1_vup','A2_gik','B1_wod','B2_mip','Filler1_kud','Filler2_rul','Filler3_hib','Filler4_wub','X01_nupen','X02_lobat','X03_tasom','X04_basut','X05_sapet','X06_rilom','X07_solug','X08_rinag','X09_tilop','X10_rodup','X11_lemip','X12_tabig','X13_tobir','X14_lebam','X15_nabem','X16_debog','X17_tanab','X18_redib','X19_lobun','X20_rinur','X21_dolet','X22_sabip','X23_solib','X24_sunic'].map(f=>'audio_verbal/'+f+'.wav');
@@ -933,7 +933,7 @@ function runExperiment() {
     data: { screen: "autism_dx" }
   });
 
-  // ---- Q4–Q5: only shown if diagnosed ----
+  // ---- Q4-Q5: only shown if diagnosed ----
   const autismDetail = {
     type: jsPsychSurveyHtmlForm,
     preamble: `<div class="q-wrap"><p>A couple of follow-up questions about your diagnosis.</p></div>`,
@@ -980,7 +980,7 @@ function runExperiment() {
     data: { screen: "lang_gate" }
   });
 
-  // ---- Q7–Q13: multi-language LOOP (one language per pass) ----
+  // ---- Q7-Q13: multi-language LOOP (one language per pass) ----
   let langIndex = 0;
   const MAX_LANGS = 6;   // safety cap to prevent an endless loop
 
@@ -1077,7 +1077,7 @@ function runExperiment() {
   });
 
 
-  // ---- SECTION C: NAD task — both modalities, order counterbalanced per participant ----
+  // ---- SECTION C: NAD task; both modalities, order counterbalanced per participant ----
   // Task order: assigned by Prolific-ID parity (deterministic, ~50/50, mirrors the even/odd-ID
   // assignment used by Dumont et al., 2025). Prolific IDs are alphanumeric, so parity is taken
   // from the sum of character codes. With no ID (local testing), fall back to random.
@@ -1102,7 +1102,7 @@ function runExperiment() {
   timeline.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: `<div class="task-card"><div class="welcome-title">Halfway there</div>
-      <p>You've finished the first listening game — nice work. Take a short break whenever you need it.</p>
+      <p>You've finished the first listening game; nice work. Take a short break whenever you need it.</p>
       <p>The next game works the <b>same way</b>, but uses a <b>different set of sounds</b>. We'll remind you of the rules and show you the new target before you start.</p></div>`,
     choices: ["I'm ready for the next part"]
   });
@@ -1116,7 +1116,7 @@ function runExperiment() {
     type: jsPsychSurveyHtmlForm,
     preamble: `<div class="q-wrap"><div class="doc-title">A few final questions</div>
       <p>Now that both listening games are over, we'd like to know how they felt to you.
-      There are no right or wrong answers — please just say what matches your experience.</p></div>`,
+      There are no right or wrong answers; please just say what matches your experience.</p></div>`,
     html: `<div class="q-wrap">
       <div class="q-block notice-block">
         <label class="q-label">14. While listening, did you notice any pattern or rule in how the clips were put together?</label>
@@ -1167,20 +1167,39 @@ function runExperiment() {
     data: { screen: "awareness" }
   });
 
-  // ---- Placeholder: debrief + Prolific completion come next ----
+  // ---- SECTION E: Debrief ----
   timeline.push({
     type: jsPsychHtmlButtonResponse,
-    stimulus: `<div class="welcome-title">Thank you — that's the end of the tasks</div>
-      <p>Your responses have been recorded.</p>
-      <p class="subtle">(Test build — the debrief screen and the return-to-Prolific step still need to be added.)</p>`,
-    choices: ["Finish"]
+    stimulus: `<div class="doc-wrap">
+      <div class="doc-title">Thank you for taking part</div>
+      <p>You have now finished all of the tasks. Thank you very much for your time and attention.</p>
+
+      <h3>What this study was really about</h3>
+      <p>This study looks at how people pick up on hidden regularities in sequences of sounds. In the listening games, the clips were not random: in most clips, the <b>first</b> sound predicted the <b>last</b> sound, even though a different sound always came in between. We did not mention this at the start, because knowing about it could change the way you listened; these patterns are meant to be picked up naturally rather than searched for on purpose.</p>
+      <p>By looking at how quickly people respond across the games, we can see whether they become sensitive to these "non-adjacent" relationships, and whether this differs between spoken sounds and musical sounds. We are also interested in how this relates to autistic and non-autistic experience and to people's language backgrounds.</p>
+
+      <h3>There are no right or wrong answers</h3>
+      <p>This is not a test of ability, and your individual results are not judged in any way. We are only interested in general patterns across many people.</p>
+
+      <h3>Your data</h3>
+      <p>Your responses are stored without your name and are handled as described in the information sheet you read at the start, in line with UK data-protection law. If you would like your data to be withdrawn, please contact the researcher using the details below and quote your Prolific ID so that your data can be found.</p>
+
+      <h3>Questions or concerns</h3>
+      <p>Researcher: Jinghan (Leah) Chen, jinghan.chen.25@ucl.ac.uk<br>
+         Supervisor: Mikhail Kissine, m.kissine@ucl.ac.uk</p>
+      <p>This study was approved by the UCL Research Ethics Committee (approval ID 4620). If you wish to raise a concern, you can contact the Chair of the Committee at ethics@ucl.ac.uk.</p>
+
+      <p class="consent-intro"><b>Important:</b> to register your participation and receive your payment, please press the button below; you will then be returned to Prolific. Payment is arranged through Prolific once your completion has been recorded.</p>
+    </div>`,
+    choices: ["Finish and return to Prolific"],
+    data: { screen: "debrief" }
   });
   if (ON_PAVLOVIA) {
     timeline.push({ type: jsPsychPavlovia, command: "finish" });
   } else {
     // Local / preview test mode: show a small banner so it's clear data won't be saved to the server.
     var banner = document.createElement('div');
-    banner.textContent = "TEST MODE — not on run.pavlovia.org. Pavlovia is skipped; your responses are shown on screen at the end but NOT saved to the server.";
+    banner.textContent = "TEST MODE; not on run.pavlovia.org. Pavlovia is skipped; your responses are shown on screen at the end but NOT saved to the server.";
     banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:#fff3cd;color:#664d03;border-bottom:1px solid #e0c97f;padding:7px 12px;font:13px sans-serif;text-align:center;z-index:9999;";
     document.body.appendChild(banner);
   }
