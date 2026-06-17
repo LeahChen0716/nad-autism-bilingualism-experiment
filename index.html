@@ -604,7 +604,7 @@ function buildNadTask(jsPsych, opts){
   // practice (with feedback)
   tl.push(btn(`<div class="task-card"><div class="welcome-title">Practice</div>
     <p>Let's try a few clips. You'll get feedback (✓ / ✗) so you can get used to it.</p>
-    <p>Keep your fingers on ${KT} and ${KN}.</p></div>`, 'Start practice'));
+    <p>Keep your fingers on the ${KT} and ${KN} keys on your keyboard.</p></div>`, 'Start practice'));
   // build a short practice set (intact)
   const practiceSet=[]; const tgt=B[targetBIdx], ntg=B[nonTargetBIdx];
   for(let i=0;i<CFG.practiceTrials;i++){
