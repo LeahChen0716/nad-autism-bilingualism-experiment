@@ -56,7 +56,7 @@ The experiment is a single self-contained `index.html` plus the two audio folder
 - **Trial:** a three-element A–X–B sequence. The participant responds to whether the clip ends with the target, key F if it does, J otherwise.
 - **Dependency:** during training, A predicts B across a variable middle element X. Per task: 2 A, 2 B, 24 X, 4 filler.
 - **Instructions are deliberately neutral** :participants are told only the response rule (respond to whether the clip ends with the target). They are not told to ignore the first element, and not told to look for a rule.
-- **Reaction time** is measured from the onset of the third element and may be **negative** (anticipation); a custom WebAudio-scheduled plugin handles the timing.
+- **Reaction time** is measured from the onset of the third element and may be negative (anticipation); a custom WebAudio-scheduled plugin handles the timing.
 - **Blocks:** training → one disruption block (A replaced by a filler, removing the dependency) → one recovery block (dependency restored).
 
 ### Counterbalancing
