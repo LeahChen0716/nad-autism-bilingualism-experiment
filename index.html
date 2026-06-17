@@ -598,8 +598,7 @@ function buildNadTask(jsPsych, opts){
     <div class="welcome-title">This is the target ${opts.oneNoun}</div>
     <p>Have a listen a few times so you can recognise it. From now on, press ${KT} whenever a clip <b>ends with this ${opts.oneNoun}</b>.</p>
     <div class="demo-row"><span class="demo-tag">TARGET (${CFG.targetKey.toUpperCase()}):</span><audio controls preload="auto" src="${targetFile}"></audio></div>
-    <p style="margin-top:18px;">Here is a <b>different</b> ${opts.oneNoun}. When a clip ends with anything that is <b>not</b> the target, press ${KN}:</p>
-    <div class="demo-row"><span class="demo-tag">other (${CFG.nonTargetKey.toUpperCase()}):</span><audio controls preload="auto" src="${otherFile}"></audio></div>
+    <p style="margin-top:16px;">When a clip ends with <b>any other</b> ${opts.oneNoun}, press ${KN}.</p>
   </div>`, "I've learned the target; let's practise"));
 
   // practice (with feedback)
