@@ -406,6 +406,8 @@ var jsPsychPavlovia = (function (jsPsych)
       const ctx = jsPsych.pluginAPI.audioContext();
 
       let responded=false, response_key=null, rt=null, correct=null, bOnsetPerf=null, ended=false;
+      let bEndPerf=null, concludeScheduled=false, in_window=null;
+      const selfPaced=!!trial.self_paced;   // practice: no deadline, advance after they respond
       const cleanup = [];
 
       function pulse(delay){
@@ -427,7 +429,10 @@ var jsPsychPavlovia = (function (jsPsych)
         const finish=()=>{ display_element.innerHTML=''; jsPsych.finishTrial({
           screen:'nad_trial', task:trial.task, block_type:trial.block_type, block_index:trial.block_index,
           trial_role:trial.trial_role, a_id:trial.a_id, x_id:trial.x_id, b_id:trial.b_id,
-          is_target:trial.is_target, response:response_key, rt:rt, correct:correct
+          is_target:trial.is_target, response:response_key, rt:rt, correct:correct,
+          responded:responded, in_window:in_window,
+          response_status: !responded ? 'no_response' : (in_window===false ? 'too_slow' : 'in_time'),
+          invalidated_by_restart: false, flagged_nonresponder: false
         }); };
         if(showFb){ setTimeout(finish, 550); } else { finish(); }
       }
@@ -439,9 +444,18 @@ var jsPsychPavlovia = (function (jsPsych)
         const pressPerf=performance.now();
         response_key=k;
         rt=(bOnsetPerf!=null)?(pressPerf-bOnsetPerf):null;
+        in_window = (!selfPaced && rt!=null) ? (rt <= trial.response_window_ms) : null;   // false => 'too slow' (still recorded); null in self-paced practice
         correct = trial.is_target ? (k===targetKey) : (k===nonTargetKey);
         const el = (k===targetKey)? display_element.querySelector('#kbd-target') : display_element.querySelector('#kbd-other');
         if(el) el.classList.add('pressed');
+        // response-terminated: end shortly after the clip has finished (so B is always heard in full)
+        if(!concludeScheduled && !ended){
+          concludeScheduled=true;
+          const now=performance.now();
+          const gap = selfPaced ? 450 : 300;
+          const wait=Math.max(0,((bEndPerf!=null?bEndPerf:now)-now))+gap;
+          const tc=setTimeout(conclude, wait); cleanup.push(()=>clearTimeout(tc));
+        }
       };
       document.addEventListener('keydown', onKey);
       cleanup.push(()=>document.removeEventListener('keydown', onKey));
@@ -463,9 +477,16 @@ var jsPsychPavlovia = (function (jsPsych)
           const perf0=performance.now(), c0=ctx.currentTime;
           const toPerf=(tc)=>perf0+(tc-c0)*1000;
           bOnsetPerf=toPerf(tB);
+          bEndPerf=bOnsetPerf+(bB.duration*1000);
           pulse(toPerf(tA)-perf0); pulse(toPerf(tX)-perf0); pulse(toPerf(tB)-perf0);
-          const endDelay=(toPerf(tB)-perf0)+trial.response_window_ms;
-          const te=setTimeout(conclude, endDelay); cleanup.push(()=>clearTimeout(te));
+          if(selfPaced){
+            // no deadline; safety cap so a non-responder can't hang the task
+            const cap=setTimeout(conclude, (toPerf(tB)-perf0)+8000); cleanup.push(()=>clearTimeout(cap));
+          } else {
+            // late-capture deadline: in-time window + grace, so 'too slow' presses are logged (not lost)
+            const lateDeadline=(toPerf(tB)-perf0)+trial.response_window_ms+trial.late_grace_ms;
+            const te=setTimeout(conclude, lateDeadline); cleanup.push(()=>clearTimeout(te));
+          }
         } else {
           // HTML5 <audio> fallback (less precise)
           const dA=((bA&&bA.duration)||0.5)*1000, dX=((bX&&bX.duration)||0.6)*1000;
@@ -473,8 +494,13 @@ var jsPsychPavlovia = (function (jsPsych)
           const whenX=dA+gap*1000, whenB=whenX+dX+gap*1000;
           play(bA,0); play(bX,whenX); play(bB,whenB);
           pulse(0); pulse(whenX); pulse(whenB);
-          const tb=setTimeout(()=>{ bOnsetPerf=performance.now(); }, whenB); cleanup.push(()=>clearTimeout(tb));
-          const te=setTimeout(conclude, whenB+trial.response_window_ms); cleanup.push(()=>clearTimeout(te));
+          const tb=setTimeout(()=>{ bOnsetPerf=performance.now(); bEndPerf=bOnsetPerf+(((bB&&bB.duration)||0.6)*1000); }, whenB); cleanup.push(()=>clearTimeout(tb));
+          if(selfPaced){
+            const cap=setTimeout(conclude, whenB+8000); cleanup.push(()=>clearTimeout(cap));
+          } else {
+            const lateDeadline=whenB+trial.response_window_ms+trial.late_grace_ms;
+            const te=setTimeout(conclude, lateDeadline); cleanup.push(()=>clearTimeout(te));
+          }
         }
       });
     }
@@ -486,7 +512,8 @@ var jsPsychPavlovia = (function (jsPsych)
       target_key:{type:PT.STRING,default:'a'}, nontarget_key:{type:PT.STRING,default:'l'},
       is_target:{type:PT.BOOL,default:false},
       inter_element_ms:{type:PT.INT,default:1000}, response_window_ms:{type:PT.INT,default:750},
-      feedback:{type:PT.BOOL,default:false},
+      late_grace_ms:{type:PT.INT,default:800},
+      feedback:{type:PT.BOOL,default:false}, self_paced:{type:PT.BOOL,default:false},
       task:{type:PT.STRING,default:'verbal'}, block_type:{type:PT.STRING,default:''}, block_index:{type:PT.INT,default:0},
       trial_role:{type:PT.STRING,default:''}, a_id:{type:PT.STRING,default:''}, x_id:{type:PT.STRING,default:''}, b_id:{type:PT.STRING,default:''}
     }
@@ -503,13 +530,16 @@ function buildNadTask(jsPsych, opts){
   const A=opts.A, B=opts.B, F=opts.F, X=opts.X;
   const allFiles=[].concat(A,B,F,X).map(o=>DIR+o.file);
 
-  // ---------- CONFIG (Dumont et al. 2025 defaults; confirm before main run) ----------
+  // ---------- CONFIG (adapted from Dumont et al. 2025 / Misyak et al. 2010; confirm before main run) ----------
   const CFG={
-    nTraining:6,   // Dumont et al. (2025)
-    perBlock:{target:12, nonTarget:12, filler:6},   // 30 trials/block
+    nTraining:5,   // 5 training blocks (Misyak 2010: ~5 needed for reliable NAD learning; trimmed from Dumont's 6)
+    perBlock:{target:8, nonTarget:8, filler:4},          // 20 trials/training & recovery block (was 30)
+    perBlockDisruption:{target:5, nonTarget:5, filler:2}, // 12 trials (Misyak's disruption ~1/3 of a training block)
     interElementMs:1000,
-    responseWindowMs:750,    // Dumont et al. (2025)
+    responseWindowMs:1200,   // real blocks: in-time threshold (protects RT-as-prediction; adult+online+keyboard)
+    lateGraceMs:800,         // extra capture beyond the window so late presses are logged as 'too_slow', not lost
     practiceTrials:8,
+    maxConsecSameResp:3,     // pseudo-randomisation: no more than N same-response trials in a row
     targetKey:'a', nonTargetKey:'l',
     itiMs:400,
     breakEvery:2     // short break after every N training blocks
@@ -530,24 +560,39 @@ function buildNadTask(jsPsych, opts){
   const nextX=()=>{ if(xQueue.length===0){ xQueue=jsPsych.randomization.shuffle(X.slice()); } return xQueue.pop(); };
   const pick=(arr)=>arr[Math.floor(Math.random()*arr.length)];
 
-  function mkTrial(e1,x,b,role,isTarget,blockType,blockIndex,feedback){
+  function mkTrial(e1,x,b,role,isTarget,blockType,blockIndex,feedback,selfPaced){
     return {
       type: window.jsPsychNadTrial,
       audioA:DIR+e1.file, audioX:DIR+x.file, audioB:DIR+b.file,
       target_key:CFG.targetKey, nontarget_key:CFG.nonTargetKey,
       is_target:isTarget, inter_element_ms:CFG.interElementMs, response_window_ms:CFG.responseWindowMs,
-      feedback:!!feedback, task:opts.task, block_type:blockType, block_index:blockIndex,
+      late_grace_ms:CFG.lateGraceMs,
+      feedback:!!feedback, self_paced:!!selfPaced, task:opts.task, block_type:blockType, block_index:blockIndex,
       trial_role:role, a_id:e1.id, x_id:x.id, b_id:b.id,
       post_trial_gap:CFG.itiMs
     };
   }
+  // pseudo-randomise so no more than CFG.maxConsecSameResp trials share the same correct response in a row
+  function constrainedShuffle(list, maxRun){
+    const keyOf=(t)=> t.is_target ? 'T':'N';
+    for(let attempt=0; attempt<200; attempt++){
+      const arr=jsPsych.randomization.shuffle(list);
+      let ok=true, run=1;
+      for(let i=1;i<arr.length;i++){
+        if(keyOf(arr[i])===keyOf(arr[i-1])){ run++; if(run>maxRun){ ok=false; break; } } else run=1;
+      }
+      if(ok) return arr;
+    }
+    return jsPsych.randomization.shuffle(list);   // fallback (very unlikely to reach)
+  }
   // mode: 'intact' (A predicts B) or 'disrupted' (filler in A position)
-  function makeTrials(mode, blockType, blockIndex, feedback){
+  function makeTrials(mode, blockType, blockIndex, feedback, counts){
+    const c=counts||CFG.perBlock;
     const list=[]; const tgt=B[targetBIdx], ntg=B[nonTargetBIdx];
-    for(let i=0;i<CFG.perBlock.target;i++){ const e1=(mode==='intact')?aForTarget:pick(F); list.push(mkTrial(e1,nextX(),tgt,'target',true,blockType,blockIndex,feedback)); }
-    for(let i=0;i<CFG.perBlock.nonTarget;i++){ const e1=(mode==='intact')?aForNonTarget:pick(F); list.push(mkTrial(e1,nextX(),ntg,'nonTarget',false,blockType,blockIndex,feedback)); }
-    for(let i=0;i<CFG.perBlock.filler;i++){ const isT=Math.random()<0.5; list.push(mkTrial(pick(F),nextX(),isT?tgt:ntg,'filler',isT,blockType,blockIndex,feedback)); }
-    return jsPsych.randomization.shuffle(list);
+    for(let i=0;i<c.target;i++){ const e1=(mode==='intact')?aForTarget:pick(F); list.push(mkTrial(e1,nextX(),tgt,'target',true,blockType,blockIndex,feedback)); }
+    for(let i=0;i<c.nonTarget;i++){ const e1=(mode==='intact')?aForNonTarget:pick(F); list.push(mkTrial(e1,nextX(),ntg,'nonTarget',false,blockType,blockIndex,feedback)); }
+    for(let i=0;i<c.filler;i++){ const isT=Math.random()<0.5; list.push(mkTrial(pick(F),nextX(),isT?tgt:ntg,'filler',isT,blockType,blockIndex,feedback)); }
+    return constrainedShuffle(list, CFG.maxConsecSameResp);
   }
 
   const btn=(stim,label)=>({ type:jsPsychHtmlButtonResponse, stimulus:stim, choices:[label||'Continue'] });
@@ -603,13 +648,13 @@ function buildNadTask(jsPsych, opts){
 
   // practice (with feedback)
   tl.push(btn(`<div class="task-card"><div class="welcome-title">Practice</div>
-    <p>Let's try a few clips. You'll get feedback (✓ / ✗) so you can get used to it.</p>
+    <p>Let's try a few clips. You'll get feedback (✓ / ✗) so you can get used to it. There's <b>no time limit</b> here; take your time and answer when you're ready.</p>
     <p>Keep your fingers on the ${KT} and ${KN} keys on your keyboard.</p></div>`, 'Start practice'));
   // build a short practice set (intact)
   const practiceSet=[]; const tgt=B[targetBIdx], ntg=B[nonTargetBIdx];
   for(let i=0;i<CFG.practiceTrials;i++){
-    if(i%2===0) practiceSet.push(mkTrial(aForTarget,nextX(),tgt,'target',true,'practice',0,true));
-    else practiceSet.push(mkTrial(aForNonTarget,nextX(),ntg,'nonTarget',false,'practice',0,true));
+    if(i%2===0) practiceSet.push(mkTrial(aForTarget,nextX(),tgt,'target',true,'practice',0,true,true));
+    else practiceSet.push(mkTrial(aForNonTarget,nextX(),ntg,'nonTarget',false,'practice',0,true,true));
   }
   tl.push({ timeline: jsPsych.randomization.shuffle(practiceSet) });
 
@@ -618,30 +663,128 @@ function buildNadTask(jsPsych, opts){
     <p>On your keyboard, press ${KT} if a clip ends with the target, ${KN} if not, as fast and accurately as you can.</p>
     <p>It runs in several short blocks, with breaks in between.</p></div>`, 'Begin'));
 
-  // 6 training blocks (+ breaks), 1 disruption, 1 recovery; block intros are generic (no hint of disruption)
+  // neutral per-block summary: RESPONSE RATE only (never accuracy/dependency -> keeps learning implicit)
+  function blockSummary(bi, withBreak){
+    return {
+      type: jsPsychHtmlButtonResponse,
+      choices: [ withBreak ? "I'm ready to continue" : "Continue" ],
+      stimulus: function(){
+        // scope strictly to THIS task + THIS block, excluding invalidated (pre-restart) rows
+        const rows = jsPsych.data.get().filter({screen:'nad_trial', task:opts.task, block_index:bi}).values()
+                       .filter(function(r){ return r.invalidated_by_restart !== true; });
+        const n = rows.length;
+        const resp = rows.filter(function(r){ return r.response!=null && r.response!==''; }).length;
+        const pct = n ? Math.round(100*resp/n) : 0;
+        const low = pct < 80;
+        const nudge = low
+          ? "Try to answer on every clip, even if you are not sure."
+          : "Great; keep answering on every clip.";
+        const rest = withBreak ? "<p style='color:#56627a;margin-top:14px;'>Take a short break, then carry on when you're ready.</p>" : "";
+        const totalBlocks = CFG.nTraining + 2;   // training + disruption + recovery
+        let dots = "";
+        for(let i=1;i<=totalBlocks;i++){
+          dots += `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 4px;background:${i<=bi?'#3a5a8c':'#d4dae6'};"></span>`;
+        }
+        return `<div class="task-card" style="text-align:center;">
+          <div style="font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#8893a7;margin-bottom:10px;">Block complete</div>
+          <div style="font-size:54px;font-weight:700;color:#1f3a5f;line-height:1;">${pct}<span style="font-size:26px;">%</span></div>
+          <div style="font-size:15px;color:#8893a7;margin-top:4px;">clips answered</div>
+          <div style="height:10px;border-radius:6px;background:#e3e8f0;max-width:320px;margin:16px auto 0;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#3a5a8c,#5b7fb8);border-radius:6px;transition:width .4s;"></div>
+          </div>
+          <p style="color:#4a5568;margin-top:18px;">${nudge}</p>
+          <div style="margin-top:22px;">
+            <div style="font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:#aab2c0;margin-bottom:8px;">Where you are in this game</div>
+            ${dots}
+          </div>
+          ${rest}
+        </div>`;
+      }
+    };
+  }
+
+  // 5 training blocks (+ breaks/summaries), 1 (smaller) disruption, 1 recovery; intros generic (no hint of disruption)
   let bi=0;
   for(let b=1;b<=CFG.nTraining;b++){
     bi++;
     tl.push(blockIntro(bi));
     tl.push({ timeline: makeTrials('intact','training',bi,false) });
-    if(b<CFG.nTraining && b%CFG.breakEvery===0){
-      tl.push(btn(`<div class="task-card"><div class="welcome-title">Short break</div>
-        <p>Take a moment to rest your eyes and ears. When you're ready, continue.</p></div>`, "I'm ready to continue"));
-    }
+    const isBreak = (b<CFG.nTraining && b%CFG.breakEvery===0);
+    tl.push(blockSummary(bi, isBreak));   // summary (doubles as the break when due)
   }
-  // disruption
+  // disruption (smaller block)
   bi++;
   tl.push(blockIntro(bi));
-  tl.push({ timeline: makeTrials('disrupted','disruption',bi,false) });
+  tl.push({ timeline: makeTrials('disrupted','disruption',bi,false,CFG.perBlockDisruption) });
+  tl.push(blockSummary(bi, false));
   // recovery
   bi++;
   tl.push(blockIntro(bi));
   tl.push({ timeline: makeTrials('intact','recovery',bi,false) });
 
-  tl.push(btn(`<div class="task-card"><div class="welcome-title">End of the listening game</div>
-    <p>Well done; that part is complete. Thank you!</p></div>`, 'Continue'));
+  // ---- Disengagement guard: if 3 blocks in a row have 0% response in this run, send them back to
+  // re-learn (practice + blocks) ONCE. Pre-restart data is marked invalid_by_restart. A second
+  // 3-in-a-row run is flagged (flagged_nonresponder) and allowed through for manual rejection. ----
+  const guardState = { run:0, restartsUsed:0 };
+  const taskName = opts.task;
 
-  return tl;
+  const restartReminder = {
+    timeline: [{
+      type: jsPsychHtmlButtonResponse,
+      choices: ["Let's practise again"],
+      stimulus: `<div class="task-card" style="text-align:center; max-width:620px;">
+        <div style="width:66px; height:66px; border-radius:50%; background:#e8f0fb; display:flex; align-items:center; justify-content:center; margin:0 auto 20px;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3a5a8c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 9 9 9"/></svg>
+        </div>
+        <div class="welcome-title" style="text-align:center;">Let's go over it again</div>
+        <p style="color:#4a5568;">It looks like the last few clips didn't get a response. No problem; this usually just means the instructions could be clearer, or there was a brief hiccup with the sound, attention, or your connection.</p>
+        <p style="color:#4a5568;">Let's run through the short practice once more. Keep your fingers on the ${KT} and ${KN} keys, and try to answer on <b>every</b> clip; there are no right or wrong answers.</p>
+      </div>`,
+      data: { screen: 'restart_notice', task: taskName }
+    }],
+    conditional_function: function(){ return guardState.run > 1; }   // only on a restart
+  };
+
+  const endScreen = btn(`<div class="task-card"><div class="welcome-title">End of the listening game</div>
+    <p>Well done; that part is complete. Thank you!</p></div>`, 'Continue');
+
+  const taskLoop = {
+    timeline: [restartReminder].concat(tl),
+    on_timeline_start: function(){ guardState.run++; },
+    loop_function: function(){
+      // look only at the current run's real-block trials (exclude already-invalidated ones)
+      const rows = jsPsych.data.get().filter({ task: taskName, screen: 'nad_trial' }).values()
+                     .filter(function(r){ return r.invalidated_by_restart !== true && r.block_type !== 'practice'; });
+      const blocks = {};
+      rows.forEach(function(r){ (blocks[r.block_index] = blocks[r.block_index] || []).push(r); });
+      const idxs = Object.keys(blocks).map(Number).sort(function(a,b){ return a-b; });
+      let maxZeroRun = 0, cur = 0;
+      idxs.forEach(function(bi){
+        const arr = blocks[bi];
+        const responded = arr.filter(function(r){ return r.responded === true || (r.response != null && r.response !== ''); }).length;
+        const rate = arr.length ? responded / arr.length : 1;
+        if (rate === 0) { cur++; if (cur > maxZeroRun) maxZeroRun = cur; } else cur = 0;
+      });
+      const threeZero = maxZeroRun >= 3;
+      if (threeZero && guardState.restartsUsed < 1) {
+        guardState.restartsUsed++;
+        // invalidate everything collected for this task so far (this run)
+        jsPsych.data.get().filter({ task: taskName }).values().forEach(function(r){
+          if (r.invalidated_by_restart !== true) r.invalidated_by_restart = true;
+        });
+        return true;   // restart the task (reminder -> practice -> blocks)
+      }
+      if (threeZero && guardState.restartsUsed >= 1) {
+        // give up looping; flag ONLY this task's rows (don't mislabel the other, possibly-good task)
+        jsPsych.data.get().filter({ task: taskName }).values().forEach(function(r){
+          r.flagged_nonresponder = true;
+        });
+      }
+      return false;
+    }
+  };
+
+  return [ taskLoop, endScreen ];
 }
 
 /* ---- Verbal task: spoken pseudoword audio (mp3 in audio_verbal/) ---- */
@@ -718,7 +861,27 @@ function runExperiment() {
     timeline.push({ type: jsPsychPavlovia, command: "init" });
   }
 
-  // ============ INFORMATION SHEET ============
+  // ============ PROLIFIC ID CONFIRMATION (backup to URL capture; ensures data can be matched to group) ============
+  timeline.push({
+    type: jsPsychSurveyHtmlForm,
+    preamble: `<div class="q-wrap"><div class="doc-title">Your Prolific ID</div>
+      <p>Please confirm your Prolific ID below so we can link your responses to your Prolific account for payment. It should already be filled in; if not, paste it from Prolific.</p></div>`,
+    html: `<div style="text-align:center;margin:6px 0 2px;">
+      <input type="text" id="pid" name="pid" value="${prolificID !== 'NO_PROLIFIC_ID' ? prolificID : ''}"
+        style="font-size:18px;padding:10px 14px;width:340px;max-width:82%;border:1px solid #b9c2cf;border-radius:8px;text-align:center;letter-spacing:.02em;"
+        placeholder="Your Prolific ID" autocomplete="off" required>
+    </div>`,
+    button_label: 'Confirm',
+    on_finish: function(data){
+      var entered = (data.response && data.response.pid ? String(data.response.pid) : '').trim();
+      if (entered) {
+        jsPsych.data.addProperties({ prolific_id_entered: entered });
+        if (prolificID === 'NO_PROLIFIC_ID') jsPsych.data.addProperties({ prolific_id: entered });
+      }
+    }
+  });
+
+
   timeline.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: `
